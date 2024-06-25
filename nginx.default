@@ -19,7 +19,7 @@ http {
     types_hash_max_size 2048;
 
     upstream vision_monitor_app {
-        server 127.0.0.1:8000;
+        server 0.0.0.0:8000;
     }
 
     server {
