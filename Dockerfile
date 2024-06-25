@@ -13,19 +13,22 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
 # Set up application directory
-WORKDIR /opt/app
+WORKDIR /opt/app/vision_monitor_website
 
 # Copy application files
 COPY requirements.txt .
 COPY start-server.sh .
-COPY vision_monitor_website ./vision_monitor_website
 COPY manage.py .
+COPY config ./config
+COPY monitor ./monitor
+COPY templates ./templates
+COPY static ./static
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Make sure the start script is executable
-RUN chmod +x /opt/app/start-server.sh
+RUN chmod +x /opt/app/vision_monitor_website/start-server.sh
 
 # Set permissions for the application directory
 RUN chown -R www-data:www-data /opt/app
@@ -37,4 +40,4 @@ EXPOSE 8000
 USER www-data
 
 # Start the server
-CMD ["/opt/app/start-server.sh"]
+CMD ["/opt/app/vision_monitor_website/start-server.sh"]

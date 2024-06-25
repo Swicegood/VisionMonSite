@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-# Change to the directory containing manage.py
-cd /opt/app
+# We're already in /opt/app/vision_monitor_website due to the WORKDIR in Dockerfile
 
 # Apply database migrations
 echo "Applying database migrations..."
