@@ -19,10 +19,10 @@ WORKDIR /opt/app/vision_monitor_website
 COPY requirements.txt .
 COPY start-server.sh .
 COPY manage.py .
-COPY config ./config
-COPY monitor ./monitor
-COPY templates ./templates
-COPY static ./static
+COPY ./vision_monitor_website/config ./config
+COPY ./vision_monitor_website/monitor ./monitor
+COPY ./vision_monitor_website/templates ./templates
+COPY ./vision_monitor_website/static ./static
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
