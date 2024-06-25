@@ -1,29 +1,52 @@
-upstream vision_monitor_app {
-    server 127.0.0.1:8000;
+# Remove the user directive as we're running nginx as www-data
+#user www-data;
+worker_processes auto;
+pid /tmp/nginx.pid;
+
+events {
+    worker_connections 1024;
 }
 
-server {
-    listen 8000;
-    server_name _;  # This will respond to any server name
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
 
-    location = /favicon.ico { access_log off; log_not_found off; }
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
 
-    location /static/ {
-        root /opt/app/vision_monitor_website;
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    upstream vision_monitor_app {
+        server 127.0.0.1:8000;
     }
 
-    location /media/ {
-        root /opt/app/vision_monitor_website;
-    }
+    server {
+        listen 8000;
+        server_name _;
 
-    location / {
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass http://vision_monitor_app;
-    }
+        location = /favicon.ico { access_log off; log_not_found off; }
 
-    access_log /var/log/nginx/vision_monitor_access.log;
-    error_log /var/log/nginx/vision_monitor_error.log;
+        location /static/ {
+            alias /opt/app/vision_monitor_website/static/;
+        }
+
+        location /media/ {
+            alias /opt/app/vision_monitor_website/media/;
+        }
+
+        location / {
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_pass http://vision_monitor_app;
+        }
+
+        # Set client_max_body_size to 0 to allow large file uploads
+        client_max_body_size 0;
+    }
 }

@@ -25,4 +25,4 @@ gunicorn config.wsgi:application \
 
 # Start Nginx
 echo "Starting Nginx..."
-nginx -g "daemon off;"
+nginx -g "daemon off; error_log /dev/stderr; pid /tmp/nginx.pid;"
