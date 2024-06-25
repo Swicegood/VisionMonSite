@@ -15,7 +15,7 @@ python manage.py collectstatic --noinput
 echo "Starting Gunicorn..."
 gunicorn config.wsgi:application \
     --name vision_monitor_website \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:8001 \
     --workers 3 \
     --log-level=info \
     --access-logfile=- \
