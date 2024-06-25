@@ -2,6 +2,8 @@
 set -e
 
 # We're already in /opt/app/vision_monitor_website due to the WORKDIR in Dockerfile
+cd /opt/app/vision_monitor_website
+
 
 # Apply database migrations
 echo "Applying database migrations..."
