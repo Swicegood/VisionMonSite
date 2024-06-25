@@ -26,8 +26,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Set permissions
 RUN chown -R www-data:www-data /opt/app
 
+# Make sure the start script is executable
+RUN chmod +x /opt/app/start-server.sh
+
 # Expose port
-EXPOSE 8020
+EXPOSE 8000
 
 # Set stop signal
 STOPSIGNAL SIGTERM
