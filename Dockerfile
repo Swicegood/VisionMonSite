@@ -22,7 +22,7 @@ COPY manage.py .
 COPY ./vision_monitor_website/config ./config
 COPY ./vision_monitor_website/monitor ./monitor
 COPY ./vision_monitor_website/templates ./templates
-COPY ./vision_monitor_website/static ./static
+COPY static ./static
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
