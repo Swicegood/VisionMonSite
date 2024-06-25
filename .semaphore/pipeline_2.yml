@@ -1,10 +1,9 @@
-version: v2.1
+version: v1.0
 name: Vision Monitor Docker Build Pipeline
 agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu20.04
-
 blocks:
   - name: Docker Build
     task:
@@ -21,9 +20,9 @@ blocks:
       jobs:
         - name: Build and Push Docker Image
           commands:
-            - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-            - docker pull $DOCKER_USERNAME/vision-monitor-website:latest || true
-            - docker build --cache-from=$DOCKER_USERNAME/vision-monitor-website:latest -t $DOCKER_USERNAME/vision-monitor-website:latest .
-            - docker push $DOCKER_USERNAME/vision-monitor-website:latest
+            - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
+            - 'docker pull $DOCKER_USERNAME/vision-monitor-website:latest || true'
+            - 'docker build --cache-from=$DOCKER_USERNAME/vision-monitor-website:latest -t $DOCKER_USERNAME/vision-monitor-website:latest .'
+            - 'docker push $DOCKER_USERNAME/vision-monitor-website:latest'
       secrets:
         - name: dockerhub
