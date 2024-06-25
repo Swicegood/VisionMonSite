@@ -1,0 +1,44 @@
+version: v2.1
+name: Vision Monitor Initial Pipeline
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu20.04
+
+blocks:
+  - name: Build
+    task:
+      jobs:
+        - name: Build
+          commands:
+            - sem-version python 3.11
+            - checkout
+            - cache restore
+            - pip install -r requirements.txt
+            - cache store
+
+  - name: Tests
+    task:
+      prologue:
+        commands:
+          - sem-version python 3.11
+          - checkout
+          - cache restore
+          - pip install -r requirements.txt
+      jobs:
+        - name: Unit tests
+          commands:
+            - cd vision_monitor_website
+            - python manage.py makemigrations
+            - python manage.py migrate --run-syncdb
+            - python manage.py test
+        - name: Checklist
+          commands:
+            - cd vision_monitor_website
+            - python manage.py check --deploy
+
+promotions:
+  - name: Dockerize
+    pipeline_file: pipeline_2.yml
+    auto_promote:
+      when: "branch = 'main' AND result = 'passed'"

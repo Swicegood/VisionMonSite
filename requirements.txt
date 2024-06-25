@@ -1,0 +1,32 @@
+# Web framework
+Django==4.2.7
+
+# WSGI HTTP Server
+gunicorn==21.2.0
+
+# Database adapter (assuming PostgreSQL, adjust if using a different database)
+psycopg2-binary==2.9.9
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# REST API framework (if you're building an API)
+djangorestframework==3.14.0
+
+# CORS headers for API requests
+django-cors-headers==4.3.0
+
+# Image processing (useful for vision-related tasks)
+Pillow==10.1.0
+
+# For handling .env files
+python-dotenv==1.0.0
+
+# Task queue (optional, for background processing)
+celery==5.3.4
+
+# Swagger API documentation (optional)
+drf-yasg==1.21.7
+
+# Debugging
+django-debug-toolbar==4.2.0
