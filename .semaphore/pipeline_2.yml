@@ -3,12 +3,8 @@ name: Vision Monitor Docker Build Pipeline
 agent:
   machine:
     type: e1-standard-2
-<<<<<<< HEAD
     os_image: ubuntu2004
 
-=======
-    os_image: ubuntu20.04
->>>>>>> 2365094f9fd9dfc726ede9a54a998e88fa882b37
 blocks:
   - name: Docker Build
     task:

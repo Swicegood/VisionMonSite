@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitor - Vision Monitor{% endblock %}
+
+{% block content %}
+<h1>Vision Monitor</h1>
+<div class="row">
+    <div class="col-md-6">
+        <h2>Input</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="input_text" class="form-label">Enter text for LLM processing:</label>
+                <textarea class="form-control" id="input_text" name="input_text" rows="4"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Process</button>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <h2>Output</h2>
+        <div id="output_area">
+            <!-- LLM results will be displayed here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
