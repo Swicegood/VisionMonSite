@@ -1,0 +1,29 @@
+upstream vision_monitor_app {
+    server 127.0.0.1:8000;
+}
+
+server {
+    listen 80;
+    server_name vision_monitor.example.com;  # Replace with your domain name or IP address
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+
+    location /static/ {
+        root /opt/app/vision_monitor_website;
+    }
+
+    location /media/ {
+        root /opt/app/vision_monitor_website;
+    }
+
+    location / {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://vision_monitor_app;
+    }
+
+    access_log /var/log/nginx/vision_monitor_access.log;
+    error_log /var/log/nginx/vision_monitor_error.log;
+}
