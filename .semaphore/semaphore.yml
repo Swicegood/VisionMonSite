@@ -1,4 +1,4 @@
-version: v2.1
+version: v1.0
 name: Vision Monitor Initial Pipeline
 agent:
   machine:
@@ -16,7 +16,6 @@ blocks:
             - cache restore
             - pip install -r requirements.txt
             - cache store
-
   - name: Tests
     task:
       prologue:
@@ -36,9 +35,8 @@ blocks:
           commands:
             - cd vision_monitor_website
             - python manage.py check --deploy
-
 promotions:
   - name: Dockerize
     pipeline_file: pipeline_2.yml
     auto_promote:
-      when: "branch = 'main' AND result = 'passed'"
+      when: branch = 'main' AND result = 'passed'
