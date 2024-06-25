@@ -7,7 +7,7 @@ SECRET_KEY = 'your-secret-key-here'  # Change this to a secure random string
 
 DEBUG = True  # Set to False in production
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
