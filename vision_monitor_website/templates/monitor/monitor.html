@@ -1,10 +1,16 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Monitor - Vision Monitor{% endblock %}
 
 {% block content %}
 <h1>Vision Monitor</h1>
 <div class="row">
+    <div class="col-md-6">
+        <h2>Output</h2>
+        <div id="llm-output"></div>
+
+        <script src="{% static 'js/websocket.js' %}"></script>
+    </div>
     <div class="col-md-6">
         <h2>Input</h2>
         <form method="post">
@@ -15,12 +21,6 @@
             </div>
             <button type="submit" class="btn btn-primary">Process</button>
         </form>
-    </div>
-    <div class="col-md-6">
-        <h2>Output</h2>
-        <div id="output_area">
-            <!-- LLM results will be displayed here -->
-        </div>
     </div>
 </div>
 {% endblock %}

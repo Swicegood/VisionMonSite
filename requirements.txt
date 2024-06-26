@@ -30,3 +30,9 @@ drf-yasg==1.21.7
 
 # Debugging
 django-debug-toolbar==4.2.0
+
+websockets==10.0
+
+channels
+
+daphne
