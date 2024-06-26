@@ -1,28 +1,50 @@
-const socket = new WebSocket('ws://' + window.location.host + '/ws/llm_output/');
+let socket;
 
-   socket.onopen = function(e) {
-       console.log("WebSocket connection established");
-   };
+   function connectWebSocket() {
+       socket = new WebSocket('ws://' + window.location.host + '/ws/llm_output/');
 
-   socket.onmessage = function(event) {
-       console.log("Received message:", event.data);
-       const data = JSON.parse(event.data);
+       socket.onopen = function(e) {
+           console.log("WebSocket connection established");
+       };
+
+       socket.onmessage = function(event) {
+           console.log("Received message:", event.data);
+           const data = JSON.parse(event.data);
+           addMessage(data.message);
+       };
+
+       socket.onclose = function(event) {
+           console.log("WebSocket connection closed. Attempting to reconnect...");
+           setTimeout(connectWebSocket, 1000);
+       };
+
+       socket.onerror = function(error) {
+           console.error(`WebSocket Error: ${error.message}`);
+       };
+   }
+
+   function addMessage(message) {
        const outputElement = document.getElementById('llm-output');
        if (outputElement) {
-           outputElement.innerHTML += data.message;
+           outputElement.innerHTML += message + '<br>';
+           // Store messages in localStorage
+           let messages = JSON.parse(localStorage.getItem('llmMessages') || '[]');
+           messages.push(message);
+           localStorage.setItem('llmMessages', JSON.stringify(messages));
        } else {
            console.error("Element with id 'llm-output' not found");
        }
-   };
+   }
 
-   socket.onclose = function(event) {
-       if (event.wasClean) {
-           console.log(`Connection closed cleanly, code=${event.code}, reason=${event.reason}`);
-       } else {
-           console.error('Connection died');
+   function loadMessages() {
+       const outputElement = document.getElementById('llm-output');
+       if (outputElement) {
+           let messages = JSON.parse(localStorage.getItem('llmMessages') || '[]');
+           outputElement.innerHTML = messages.join('<br>');
        }
-   };
+   }
 
-   socket.onerror = function(error) {
-       console.error(`WebSocket Error: ${error.message}`);
-   };
+   document.addEventListener('DOMContentLoaded', function() {
+       loadMessages();
+       connectWebSocket();
+   });
