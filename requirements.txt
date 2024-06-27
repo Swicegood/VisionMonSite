@@ -37,4 +37,4 @@ channels
 
 daphne
 
-whitenoise
+whitenoise[brotli]==6.4.0

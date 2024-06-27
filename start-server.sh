@@ -11,15 +11,9 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Start Gunicorn
-echo "Starting Gunicorn..."
-gunicorn config.wsgi:application \
-    --name vision_monitor_website \
-    --bind 0.0.0.0:8001 \
-    --workers 3 \
-    --log-level=info \
-    --access-logfile=- \
-    --error-logfile=- &
+# Start Daphne for ASGI support
+echo "Starting Daphne..."
+daphne -b 0.0.0.0 -p 8000 config.asgi:application &
 
 # Start Nginx
 echo "Starting Nginx..."
