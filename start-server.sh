@@ -16,5 +16,5 @@ echo "Starting Daphne..."
 daphne -b 0.0.0.0 -p 8000 config.asgi:application &
 
 # Start Nginx
-echo "Starting Nginx..."
-nginx -g "daemon off;"
+# echo "Starting Nginx..."
+# nginx -g "daemon off;"
