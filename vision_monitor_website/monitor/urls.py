@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path
+from django.views.static import serve
+from django.conf import settings
 from . import views
+import os
 
 def serve_favicon(request):
     favicon_path = os.path.join(settings.STATIC_ROOT, 'favicon.ico')

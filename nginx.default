@@ -27,7 +27,7 @@ http {
        server_name _;
 
 
-       location = /favicon.ico 
+       location = /favicon.ico {
        alias /opt/app/vision_monitor_website/staticfiles/favicon.ico;
        }
 
