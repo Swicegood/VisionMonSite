@@ -22,7 +22,6 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             # If the message is not JSON, treat the entire text_data as the message
             message = text_data
         
-        logger.info(f"Received message: {message}")
         await self.channel_layer.group_send(
             "llm_output",
             {
@@ -36,4 +35,3 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
-        logger.info(f"Sent message: {message}")
