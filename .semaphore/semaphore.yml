@@ -27,12 +27,24 @@ blocks:
         - name: Unit tests
           commands:
             - cd vision_monitor_website
+            - |
+              cat << EOF > temp_settings.py
+              from .settings import *
+              DATABASES = {
+                  'default': {
+                      'ENGINE': 'django.db.backends.sqlite3',
+                      'NAME': ':memory:',
+                  }
+              }
+              EOF
+            - export DJANGO_SETTINGS_MODULE=temp_settings
             - python manage.py makemigrations
             - python manage.py migrate --run-syncdb
             - python manage.py test
         - name: Checklist
           commands:
             - cd vision_monitor_website
+            - export DJANGO_SETTINGS_MODULE=temp_settings
             - python manage.py check --deploy
 promotions:
   - name: Dockerize
