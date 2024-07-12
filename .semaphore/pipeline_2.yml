@@ -16,7 +16,7 @@ blocks:
           - cd vision_monitor_website
           - |
             cat << EOF > temp_settings.py
-            from vision_monitor_website.settings import *
+            from config.settings import *
             
             # Override the DATABASES setting
             DATABASES = {
