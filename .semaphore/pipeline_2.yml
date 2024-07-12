@@ -16,14 +16,20 @@ blocks:
           - cd vision_monitor_website
           - |
             cat << EOF > temp_settings.py
-            from .settings import *
+            from vision_monitor_website.settings import *
+            
+            # Override the DATABASES setting
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
                     'NAME': ':memory:',
                 }
             }
+            
+            # Ensure other necessary settings are preserved
+            # Add any other settings that need to be overridden here
             EOF
+          - export PYTHONPATH=$PYTHONPATH:$(pwd)
           - export DJANGO_SETTINGS_MODULE=temp_settings
           - python manage.py makemigrations
           - python manage.py migrate --run-syncdb
