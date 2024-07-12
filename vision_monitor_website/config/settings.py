@@ -59,10 +59,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'visionmon',
+        'USER': 'pguser',
+        'PASSWORD': 'pgpass',
+        'HOST': '192.168.0.71',
+        'PORT': '5432',
     }
 }
 
