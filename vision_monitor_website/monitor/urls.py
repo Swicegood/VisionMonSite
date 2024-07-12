@@ -14,4 +14,5 @@ urlpatterns = [
     path('monitor/', views.monitor, name='monitor'),
     path('test_websocket/', views.test_websocket, name='test_websocket'),
     path('favicon.ico', serve_favicon),
+    path('get_latest_image/<int:camera_index>/', views.get_latest_image, name='get_latest_image'),
 ]

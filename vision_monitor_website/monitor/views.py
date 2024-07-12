@@ -1,12 +1,33 @@
 from django.shortcuts import render
+from django.http import HttpResponse
+from django.db import connection
+import base64
 
 def home(request):
     return render(request, 'monitor/home.html')
 
 def monitor(request):
-    # Add your LLM interaction logic here
     return render(request, 'monitor/monitor.html')
 
+def get_latest_image(request, camera_index):
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT vb.data
+            FROM visionmon_metadata vm
+            JOIN visionmon_binary_data vb ON vm.data_id = vb.id
+            WHERE vm.camera_index = %s
+            ORDER BY vm.timestamp DESC
+            LIMIT 1
+        """, [camera_index])
+        result = cursor.fetchone()
+        
+    if result:
+        image_data = result[0]
+        return HttpResponse(image_data, content_type='image/jpeg')
+    else:
+        # Return a placeholder or error image
+        return HttpResponse(status=404)
+    
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import logging
