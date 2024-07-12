@@ -123,8 +123,6 @@
                     <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
                     <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
                     <img src="/get_latest_image/${camera.cameraIndex}/" alt="Camera ${camera.cameraIndex}" class="img-fluid">
-                    <div class="camera-info">Description:</div>
-                    <div class="description">${camera.description}</div>
                 `;
                 cameraFeeds.appendChild(cameraElement);
             });

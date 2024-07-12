@@ -23,6 +23,7 @@ def get_latest_image(request, camera_index):
         
     if result:
         image_data = result[0]
+        print(f"Image data length: {len(image_data)}")
         return HttpResponse(image_data, content_type='image/jpeg')
     else:
         # Return a placeholder or error image
