@@ -19,7 +19,7 @@ function typeWriter(element, text, speed) {
     type();
 }
 
-function updateCameraFeeds() {
+function updateCameraFeeds(cameraStates) {
     cameraFeeds.innerHTML = '';
     [...cameraMap.values()].forEach(camera => {
         const cameraElement = document.createElement('div');
@@ -30,7 +30,13 @@ function updateCameraFeeds() {
             <img src="/get_latest_image/${camera.cameraIndex}/" alt="Camera ${camera.cameraIndex}" class="img-fluid">
             <div class="camera-info">Description:</div>
             <div class="description">${camera.description}</div>
+            <div class="camera-state"></div>
         `;
+        const cameraStateElement = cameraElement.querySelector('.camera-state');
+        if (cameraStates && cameraStates[camera.cameraName]) {
+            cameraStateElement.textContent = cameraStates[camera.cameraName];
+            colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
+        }
         cameraFeeds.appendChild(cameraElement);
     });
     cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
@@ -51,20 +57,20 @@ function updateLLMOutput() {
     llmOutput.scrollTop = llmOutput.scrollHeight;
 }
 
-function colorCodeState(state) {
-    facilityState.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
+function colorCodeState(element, state) {
+    element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
     if (state.includes('busy')) {
-        facilityState.classList.add('bg-danger', 'text-white');
+        element.classList.add('bg-danger', 'text-white');
     } else if (state.includes('off-hours') || state.includes('night-time')) {
-        facilityState.classList.add('bg-secondary', 'text-white');
+        element.classList.add('bg-secondary', 'text-white');
     } else if (state.includes('festival happening')) {
-        facilityState.classList.add('bg-warning');
+        element.classList.add('bg-warning');
     } else if (state.includes('quiet')) {
-        facilityState.classList.add('bg-success', 'text-white');
+        element.classList.add('bg-success', 'text-white');
     } else if (state.includes('meal time')) {
-        facilityState.classList.add('bg-info', 'text-white');
+        element.classList.add('bg-info', 'text-white');
     } else {
-        facilityState.classList.add('bg-light');
+        element.classList.add('bg-light');
     }
 }
 
@@ -72,7 +78,8 @@ socket.onmessage = function(e) {
     const data = JSON.parse(e.data);
     if (data.facility_state) {
         facilityState.textContent = data.facility_state;
-        colorCodeState(data.facility_state);
+        colorCodeState(facilityState, data.facility_state);
+        updateCameraFeeds(data.camera_states);
     } else if (data.message) {
         const [cameraName, cameraIndex, timestamp, ...descriptionParts] = data.message.split(' ');
         const description = descriptionParts.join(' ');
