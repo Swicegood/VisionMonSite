@@ -88,6 +88,7 @@ function colorCodeState(element, state) {
 socket.onmessage = function(e) {
     const data = JSON.parse(e.data);
     if (data.facility_state) {
+        console.log("Data Facility state", data.facility_state);
         facilityState.textContent = data.facility_state;
         colorCodeState(facilityState, data.facility_state);
         updateCameraFeeds(data.camera_states);
@@ -119,6 +120,7 @@ socket.onmessage = function(e) {
         }
     }
     if (data.camera_states) {
+        console.log("Data Camrea states", data.camera_states);
         updateCameraStates(data.camera_states);
     }
 };
