@@ -38,3 +38,5 @@ channels
 daphne
 
 whitenoise[brotli]==6.4.0
+
+openai
