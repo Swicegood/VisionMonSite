@@ -57,6 +57,17 @@ function updateLLMOutput() {
     llmOutput.scrollTop = llmOutput.scrollHeight;
 }
 
+function updateCameraStates(cameraStates) {
+    const cameraStatesDiv = document.getElementById('camera-states');
+    cameraStatesDiv.innerHTML = '';
+    for (const [cameraId, state] of Object.entries(cameraStates)) {
+        const stateDiv = document.createElement('div');
+        stateDiv.className = 'camera-state';
+        stateDiv.textContent = `${cameraId}: ${state}`;
+        cameraStatesDiv.appendChild(stateDiv);
+    }
+}
+
 function colorCodeState(element, state) {
     element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
     if (state.includes('busy')) {
@@ -106,5 +117,8 @@ socket.onmessage = function(e) {
             descriptionElement.innerHTML = '';
             typeWriter(descriptionElement, description, 20);
         }
+    }
+    if (data.camera_states) {
+        updateCameraStates(data.camera_states);
     }
 };
