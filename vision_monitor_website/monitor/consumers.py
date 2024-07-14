@@ -3,7 +3,7 @@ import asyncio
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from redis import asyncio as aioredis
+import redis
 import os
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,14 +40,14 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         
         if self.redis_client:
             self.redis_client.close()
-            await self.redis_client.wait_closed()
         
         logger.info("WebSocket disconnected and cleanup completed")
 
     async def connect_redis(self):
         while True:
             try:
-                self.redis_client = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
+                pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT)
+                self.redis_client = redis.Redis(connection_pool=pool)
                 logger.info("Connected to Redis")
                 return
             except Exception as e:
@@ -75,9 +75,10 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         }))
         logger.debug(f"Sent message to WebSocket: {message}")
 
-    async def request_state_processing(self):
+    @sync_to_async
+    def request_state_processing(self):
         try:
-            await self.redis_client.rpush(REDIS_STATE_CHANNEL, "process")
+            self.redis_client.rpush(REDIS_STATE_CHANNEL, "process")
             logger.info("Requested state processing via Redis")
         except Exception as e:
             logger.error(f"Error requesting state processing: {str(e)}")
@@ -85,19 +86,21 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
     async def listen_for_redis_messages(self):
         logger.info(f"Starting to listen for Redis messages on channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
         try:
-            channels = await self.redis_client.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+            pubsub = self.redis_client.pubsub()
+            pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
             logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
             
             while True:
                 try:
-                    message = await channels[0].get(encoding='utf-8')
+                    message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                     if message:
                         logger.info(f"Received message from Redis: {message}")
-                        channel = channels[0].name.decode('utf-8')
+                        channel = message['channel'].decode('utf-8')
+                        data = message['data'].decode('utf-8')
                         if channel == REDIS_STATE_RESULT_CHANNEL:
-                            logger.info(f"Received state result: {message}")
-                        await self.send(text_data=json.dumps({'channel': channel, 'message': message}))
-                        logger.debug(f"Sent Redis message to WebSocket: {message}")
+                            logger.info(f"Received state result: {data}")
+                        await self.send(text_data=json.dumps({'channel': channel, 'message': data}))
+                        logger.debug(f"Sent Redis message to WebSocket: {data}")
                     else:
                         logger.debug("No message received from Redis")
                 except Exception as e:
@@ -110,7 +113,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             logger.error(f"Unexpected error in Redis listener: {str(e)}")
         finally:
             try:
-                await self.redis_client.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+                pubsub.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
                 logger.info("Unsubscribed from Redis channels")
             except Exception as e:
                 logger.error(f"Error unsubscribing from Redis channels: {str(e)}")
@@ -125,7 +128,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
 
                 # Check for messages in Redis
                 logger.debug("Checking for messages in Redis...")
-                message = await self.redis_client.lpop(REDIS_MESSAGE_CHANNEL)
+                message = await sync_to_async(self.redis_client.lpop)(REDIS_MESSAGE_CHANNEL)
                 if message:
                     logger.info(f"Message found in {REDIS_MESSAGE_CHANNEL}: {message}")
                     await self.process_message(message.decode('utf-8'))
@@ -133,7 +136,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                     logger.debug(f"No message found in {REDIS_MESSAGE_CHANNEL}")
 
                 # Check if state processing is needed
-                state_request = await self.redis_client.lpop(REDIS_STATE_CHANNEL)
+                state_request = await sync_to_async(self.redis_client.lpop)(REDIS_STATE_CHANNEL)
                 if state_request:
                     logger.info(f"State processing request found in {REDIS_STATE_CHANNEL}")
                     await self.request_state_processing()
@@ -141,7 +144,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                     logger.debug(f"No state processing request found in {REDIS_STATE_CHANNEL}")
 
                 # Check active subscriptions
-                channels = await self.redis_client.pubsub_channels(f'{REDIS_MESSAGE_CHANNEL}*')
+                channels = await sync_to_async(self.redis_client.pubsub_channels)()
                 logger.debug(f"Active subscriptions: {channels}")
 
                 # Short sleep to prevent CPU overuse
