@@ -87,6 +87,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                         channels = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
                         logger.info("Reconnected to Redis and resubscribed to channels")
 
+                    logger.debug("Waiting for message...")
                     # Wait for message with a timeout
                     message = await asyncio.wait_for(channels[0].get(), timeout=5.0)
                     if message:
@@ -97,8 +98,13 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                             logger.info(f"Received state result: {msg}")
                         await self.send(text_data=msg)
                         logger.debug(f"Sent Redis message to WebSocket: {msg}")
+                    else:
+                        logger.debug("Received empty message from Redis")
                 except asyncio.TimeoutError:
                     logger.debug("No message received in the last 5 seconds")
+                    # Add a check for active subscriptions
+                    active_channels = await self.redis.pubsub_channels()
+                    logger.debug(f"Active PubSub channels: {active_channels}")
                 except Exception as e:
                     logger.warning(f"Error receiving message from Redis: {str(e)}")
                     await asyncio.sleep(1)  # Wait before trying again
