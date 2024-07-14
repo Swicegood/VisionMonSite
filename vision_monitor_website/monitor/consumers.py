@@ -85,21 +85,19 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
     async def listen_for_redis_messages(self):
         logger.info(f"Starting to listen for Redis messages on channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
         try:
-            pubsub = self.redis_client.pubsub()
-            await pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+            channels = await self.redis_client.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
             logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
             
             while True:
                 try:
-                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    message = await channels[0].get(encoding='utf-8')
                     if message:
                         logger.info(f"Received message from Redis: {message}")
-                        channel = message['channel'].decode('utf-8')
-                        data = message['data'].decode('utf-8')
+                        channel = channels[0].name.decode('utf-8')
                         if channel == REDIS_STATE_RESULT_CHANNEL:
-                            logger.info(f"Received state result: {data}")
-                        await self.send(text_data=json.dumps({'channel': channel, 'message': data}))
-                        logger.debug(f"Sent Redis message to WebSocket: {data}")
+                            logger.info(f"Received state result: {message}")
+                        await self.send(text_data=json.dumps({'channel': channel, 'message': message}))
+                        logger.debug(f"Sent Redis message to WebSocket: {message}")
                     else:
                         logger.debug("No message received from Redis")
                 except Exception as e:
@@ -112,7 +110,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             logger.error(f"Unexpected error in Redis listener: {str(e)}")
         finally:
             try:
-                await pubsub.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+                await self.redis_client.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
                 logger.info("Unsubscribed from Redis channels")
             except Exception as e:
                 logger.error(f"Error unsubscribing from Redis channels: {str(e)}")
