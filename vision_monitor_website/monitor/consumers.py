@@ -32,11 +32,8 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             self.redis_listener.cancel()
         
         if hasattr(self, 'redis'):
-            try:
-                self.redis.close()
-                await self.redis.wait_closed()
-            except Exception as e:
-                logger.error(f"Error closing Redis connection: {str(e)}")
+            self.redis.close()
+            await self.redis.wait_closed()
         
         logger.info("WebSocket disconnected and cleanup completed")
 
@@ -68,6 +65,13 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"Error requesting state processing: {str(e)}")
 
+    async def check_redis_connection(self):
+        try:
+            await self.redis.ping()
+            return True
+        except Exception:
+            return False
+
     async def listen_for_redis_messages(self):
         logger.info(f"Starting to listen for Redis messages on channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
         try:
@@ -77,7 +81,7 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             while True:
                 try:
                     # Check if Redis connection is still alive
-                    if not self.redis.is_connected:
+                    if not await self.check_redis_connection():
                         logger.warning("Redis connection lost. Attempting to reconnect...")
                         self.redis = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
                         channels = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
