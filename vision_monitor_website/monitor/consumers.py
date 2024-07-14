@@ -21,8 +21,10 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         await self.accept()
         self.redis_client = None
         self.redis_listener = None
+        self.background_task = None
         await self.connect_redis()
-        logger.info("WebSocket connection established and Redis listener started")
+        self.background_task = asyncio.create_task(self.background_processor())
+        logger.info("WebSocket connection established and background task started")
 
     async def disconnect(self, close_code):
         logger.info(f"Disconnecting WebSocket with code {close_code}")
@@ -30,6 +32,9 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         
         if self.redis_listener:
             self.redis_listener.cancel()
+        
+        if self.background_task:
+            self.background_task.cancel()
         
         if self.redis_client:
             self.redis_client.close()
@@ -42,7 +47,6 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
             try:
                 self.redis_client = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
                 logger.info("Connected to Redis")
-                self.redis_listener = asyncio.create_task(self.listen_for_redis_messages())
                 return
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {str(e)}")
@@ -92,6 +96,8 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                             logger.info(f"Received state result: {message}")
                         await self.send(text_data=message)
                         logger.debug(f"Sent Redis message to WebSocket: {message}")
+                    else:
+                        await asyncio.sleep(0.1)  # Short sleep to prevent CPU overuse
                 except Exception as e:
                     logger.warning(f"Error receiving message from Redis: {str(e)}")
                     await asyncio.sleep(1)  # Wait before trying again
@@ -106,6 +112,42 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                 logger.info("Unsubscribed from Redis channels")
             except Exception as e:
                 logger.error(f"Error unsubscribing from Redis channels: {str(e)}")
+
+    async def background_processor(self):
+        while True:
+            try:
+                if not self.redis_client:
+                    await self.connect_redis()
+                
+                # Check for messages in Redis
+                message = await self.redis_client.lpop(REDIS_MESSAGE_CHANNEL)
+                if message:
+                    await self.process_message(message.decode('utf-8'))
+                
+                # Check if state processing is needed
+                state_request = await self.redis_client.lpop(REDIS_STATE_CHANNEL)
+                if state_request:
+                    await self.request_state_processing()
+                
+                # Short sleep to prevent CPU overuse
+                await asyncio.sleep(0.1)
+            
+            except Exception as e:
+                logger.error(f"Error in background processor: {str(e)}")
+                await asyncio.sleep(5)
+
+    async def process_message(self, message):
+        try:
+            # Process the message here
+            logger.info(f"Processing message: {message}")
+            # You can add your message processing logic here
+            
+            # Send the processed message to the WebSocket
+            await self.send(text_data=json.dumps({
+                'message': f"Processed: {message}"
+            }))
+        except Exception as e:
+            logger.error(f"Error processing message: {str(e)}")
 
     @sync_to_async
     def debug_redis_pubsub(self):
