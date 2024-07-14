@@ -37,3 +37,5 @@ daphne
 whitenoise[brotli]==6.4.0
 openai
 redis
+python-daemon
+channels_redis

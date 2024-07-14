@@ -13,8 +13,11 @@ python manage.py collectstatic --noinput
 
 # Start Daphne for ASGI support
 echo "Starting Daphne..."
-daphne -b 0.0.0.0 -p 8001 config.asgi:application &
+~/.vision_mon_site/bin/daphne -b 0.0.0.0 -p 8001 config.asgi:application &
 
 # Start Nginx
 echo "Starting Nginx..."
 nginx -g "daemon off;"
+
+python manage.py redis_listener --daemon
+

@@ -25,8 +25,11 @@ ASGI_APPLICATION = 'routing.application'
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
-    }
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('192.168.0.71', 6379)],
+        },
+    },
 }
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -120,12 +123,12 @@ LOGGING = {
        },
        'root': {
            'handlers': ['console'],
-           'level': 'INFO',
+           'level': 'DEBUG',
        },
        'loggers': {
            'django': {
                'handlers': ['console'],
-               'level': 'INFO',
+               'level': 'DEBUG',
                'propagate': False,
            },
        },

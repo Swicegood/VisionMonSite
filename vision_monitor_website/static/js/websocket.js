@@ -123,4 +123,12 @@ socket.onmessage = function(e) {
         console.log("Data Camrea states", data.camera_states);
         updateCameraStates(data.camera_states);
     }
+    socket.onerror = function(error) {
+        console.error(`WebSocket Error: ${error.message}`);
+    };
+    
+    socket.onclose = function(e) {
+        console.log("WebSocket connection closed:", e.code, e.reason);
+    };
+
 };
