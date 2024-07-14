@@ -4,7 +4,6 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 import aioredis
-from aioredis.exceptions import ConnectionClosedError, PoolClosedError
 import os
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -83,15 +82,11 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                             logger.info(f"Received state result: {msg}")
                         await self.send(text_data=msg)
                         logger.debug(f"Sent Redis message to WebSocket: {msg}")
-                except ConnectionClosedError:
-                    logger.warning("Redis connection closed, attempting to reconnect...")
-                    await asyncio.sleep(1)  # Wait before attempting to reconnect
-                    self.redis = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
-                    channel = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+                except Exception as e:
+                    logger.warning(f"Error receiving message from Redis: {str(e)}")
+                    await asyncio.sleep(1)  # Wait before trying again
         except asyncio.CancelledError:
             logger.info("Redis listener task cancelled")
-        except PoolClosedError:
-            logger.warning("Redis pool closed, stopping listener")
         except Exception as e:
             logger.error(f"Unexpected error in Redis listener: {str(e)}")
         finally:
