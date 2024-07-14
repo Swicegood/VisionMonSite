@@ -85,24 +85,52 @@ function colorCodeState(element, state) {
     }
 }
 
-socket.onmessage = function(e) {
-    const data = JSON.parse(e.data);
-    if (data.facility_state) {
-        console.log("Data Facility state", data.facility_state);
-        facilityState.textContent = data.facility_state;
-        colorCodeState(facilityState, data.facility_state);
-        updateCameraFeeds(data.camera_states);
-    } else if (data.message) {
-        const [cameraName, cameraIndex, timestamp, ...descriptionParts] = data.message.split(' ');
-        const description = descriptionParts.join(' ');
+socket.onmessage = function (e) {
+    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
 
-        // Update camera feeds
-        cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
-        if (cameraMap.size > maxCameras) {
-            const oldestKey = cameraMap.keys().next().value;
-            cameraMap.delete(oldestKey);
+    if (data.message) {
+        try {
+            // The first parse of the message attribute which should reveal another JSON string
+            const intermediateData = JSON.parse(data.message);
+            console.log("Parsed intermediate message data:", intermediateData);
+
+            // Now parse the inner JSON from the intermediateData's message attribute
+            if (intermediateData.message) {
+                const innerData = JSON.parse(intermediateData.message);
+                console.log("Parsed inner message data (facility_state and camera_states):", innerData);
+
+                // Handling structured message content
+                if (innerData.facility_state) {
+                    console.log("Facility state:", innerData.facility_state);
+                    facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
+                    colorCodeState(facilityState, innerData.facility_state.trim());
+                }
+                if (innerData.camera_states) {
+                    console.log("Camera states:", innerData.camera_states);
+                    updateCameraStates(innerData.camera_states);
+                    updateCameraFeeds(innerData.camera_states);
+                }
+            } else {
+                // Handle unstructured messages (e.g., direct camera updates)
+                handleUnstructuredMessage(intermediateData);
+            }
+        } catch (error) {
+            console.error("Error parsing JSON:", error);
+            // Handle the message as unstructured data
+            handleUnstructuredMessage(data.message);
         }
-        updateCameraFeeds();
+    }
+};
+
+function handleUnstructuredMessage(message) {
+    console.log("Handling unstructured message:", message);
+    // Assuming the message format is "cameraName cameraIndex timestamp description"
+    const parts = message.split(' ');
+    if (parts.length >= 4) {
+        const cameraName = parts[0];
+        const cameraIndex = parts[1];
+        const timestamp = parts[2];
+        const description = parts.slice(3).join(' ');
 
         // Update LLM output
         llmMessages.push({ cameraName, cameraIndex, timestamp, description });
@@ -111,6 +139,14 @@ socket.onmessage = function(e) {
         }
         updateLLMOutput();
 
+        // Update camera map
+        cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
+        if (cameraMap.size > maxCameras) {
+            const oldestKey = cameraMap.keys().next().value;
+            cameraMap.delete(oldestKey);
+        }
+        updateCameraFeeds();
+
         // Apply typing effect to the latest LLM message
         const latestMessage = llmOutput.lastElementChild;
         if (latestMessage) {
@@ -118,17 +154,15 @@ socket.onmessage = function(e) {
             descriptionElement.innerHTML = '';
             typeWriter(descriptionElement, description, 20);
         }
+    } else {
+        console.error("Received message in unexpected format:", message);
     }
-    if (data.camera_states) {
-        console.log("Data Camrea states", data.camera_states);
-        updateCameraStates(data.camera_states);
-    }
-    socket.onerror = function(error) {
-        console.error(`WebSocket Error: ${error.message}`);
-    };
-    
-    socket.onclose = function(e) {
-        console.log("WebSocket connection closed:", e.code, e.reason);
-    };
+}
 
+socket.onerror = function (error) {
+    console.error(`WebSocket Error: ${error.message}`);
+};
+
+socket.onclose = function (e) {
+    console.log("WebSocket connection closed:", e.code, e.reason);
 };
