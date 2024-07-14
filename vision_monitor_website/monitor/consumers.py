@@ -77,13 +77,13 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
                     message = await channel[0].get()
                     if message:
                         msg = message.decode('utf-8')
-                        logger.debug(f"Received message from Redis: {msg}")
+                        logger.info(f"Received message from Redis: {msg}")
                         if REDIS_STATE_RESULT_CHANNEL in channel[0].name.decode():
                             logger.info(f"Received state result: {msg}")
                         await self.send(text_data=msg)
-                        logger.debug(f"Sent Redis message to WebSocket: {msg}")
+                        logger.info(f"Sent Redis message to WebSocket: {msg}")
                 except Exception as e:
-                    logger.warning(f"Error receiving message from Redis: {str(e)}")
+                    logger.info(f"Error receiving message from Redis: {str(e)}")
                     await asyncio.sleep(1)  # Wait before trying again
         except asyncio.CancelledError:
             logger.info("Redis listener task cancelled")
