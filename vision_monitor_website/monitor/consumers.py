@@ -4,9 +4,9 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 import aioredis
+from aioredis.exceptions import ConnectionClosedError, PoolClosedError
 import os
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -22,14 +22,24 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         await self.accept()
         self.redis = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
         logger.debug(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
-        asyncio.create_task(self.listen_for_redis_messages())
+        self.redis_listener = asyncio.create_task(self.listen_for_redis_messages())
         logger.info("WebSocket connection established and Redis listener started")
 
     async def disconnect(self, close_code):
+        logger.info(f"Disconnecting WebSocket with code {close_code}")
         await self.channel_layer.group_discard("llm_output", self.channel_name)
-        self.redis.close()
-        await self.redis.wait_closed()
-        logger.info(f"WebSocket disconnected with code {close_code}")
+        
+        if hasattr(self, 'redis_listener'):
+            self.redis_listener.cancel()
+        
+        if hasattr(self, 'redis'):
+            try:
+                self.redis.close()
+                await self.redis.wait_closed()
+            except Exception as e:
+                logger.error(f"Error closing Redis connection: {str(e)}")
+        
+        logger.info("WebSocket disconnected and cleanup completed")
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
@@ -53,23 +63,40 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
         logger.debug(f"Sent message to WebSocket: {message}")
 
     async def request_state_processing(self):
-        await self.redis.rpush(REDIS_STATE_CHANNEL, "process")
-        logger.info("Requested state processing via Redis")
+        try:
+            await self.redis.rpush(REDIS_STATE_CHANNEL, "process")
+            logger.info("Requested state processing via Redis")
+        except Exception as e:
+            logger.error(f"Error requesting state processing: {str(e)}")
 
     async def listen_for_redis_messages(self):
         logger.info(f"Starting to listen for Redis messages on channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
-        channel = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
         try:
-            while await channel[0].wait_message():
-                msg = await channel[0].get(encoding='utf-8')
-                if msg:
-                    logger.debug(f"Received message from Redis: {msg}")
-                    if REDIS_STATE_RESULT_CHANNEL in channel[0].name.decode():
-                        logger.info(f"Received state result: {msg}")
-                    await self.send(text_data=msg)
-                    logger.debug(f"Sent Redis message to WebSocket: {msg}")
+            channel = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+            while True:
+                try:
+                    message = await channel[0].get()
+                    if message:
+                        msg = message.decode('utf-8')
+                        logger.debug(f"Received message from Redis: {msg}")
+                        if REDIS_STATE_RESULT_CHANNEL in channel[0].name.decode():
+                            logger.info(f"Received state result: {msg}")
+                        await self.send(text_data=msg)
+                        logger.debug(f"Sent Redis message to WebSocket: {msg}")
+                except ConnectionClosedError:
+                    logger.warning("Redis connection closed, attempting to reconnect...")
+                    await asyncio.sleep(1)  # Wait before attempting to reconnect
+                    self.redis = await aioredis.create_redis_pool(f'redis://{REDIS_HOST}:{REDIS_PORT}')
+                    channel = await self.redis.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+        except asyncio.CancelledError:
+            logger.info("Redis listener task cancelled")
+        except PoolClosedError:
+            logger.warning("Redis pool closed, stopping listener")
         except Exception as e:
-            logger.error(f"Error listening for Redis messages: {str(e)}")
+            logger.error(f"Unexpected error in Redis listener: {str(e)}")
         finally:
-            await self.redis.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
-            logger.info("Unsubscribed from Redis channels")
+            try:
+                await self.redis.unsubscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+                logger.info("Unsubscribed from Redis channels")
+            except Exception as e:
+                logger.error(f"Error unsubscribing from Redis channels: {str(e)}")
