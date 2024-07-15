@@ -1,8 +1,7 @@
 const socket = new WebSocket('ws://' + window.location.host + '/ws/llm_output/');
 const cameraFeeds = document.getElementById('camera-feeds');
 const llmOutput = document.getElementById('llm-output');
-const facilityState = document.getElementById('facility-state');
-const overall = document.getElementById('overall');
+const facilityState = document.getElementById('facility-state');const overall = document.getElementById('overall');
 const maxCameras = 16;
 const maxLLMMessages = 50;
 const cameraMap = new Map();
@@ -20,15 +19,23 @@ function typeWriter(element, text, speed) {
     type();
 }
 
+
+function getLatestImageUrl(cameraIndex) {
+    return `/get_latest_image/${cameraIndex}/?t=${new Date().getTime()}`;
+}
+
+
+
 function updateCameraFeeds(cameraStates) {
     cameraFeeds.innerHTML = '';
     [...cameraMap.values()].forEach(camera => {
         const cameraElement = document.createElement('div');
         cameraElement.className = 'camera-feed';
+        const imageUrl = getLatestImageUrl(camera.cameraIndex);
         cameraElement.innerHTML = `
             <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
             <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
-            <img src="/get_latest_image/${camera.cameraIndex}/" alt="Camera ${camera.cameraIndex}" class="img-fluid">
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid">
             <div class="camera-info">Description:</div>
             <div class="description">${camera.description}</div>
             <div class="camera-state"></div>
@@ -65,7 +72,7 @@ function updateCameraStates(cameraStates) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
         const cameraIndex = cameraId.split(' ').slice(-1)[0];
-        const thumbnailUrl = `/get_latest_image/${cameraIndex}/`;
+        const thumbnailUrl = getLatestImageUrl(cameraIndex);
         stateDiv.innerHTML = `
             <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
             <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
@@ -169,11 +176,24 @@ function updateCameraStates(cameraStates) {
             console.error("Received message in unexpected format:", message);
         }
     }
-    
-    socket.onerror = function (error) {
-        console.error(`WebSocket Error: ${error.message}`);
-    };
-    
-    socket.onclose = function (e) {
-        console.log("WebSocket connection closed:", e.code, e.reason);
-    };
+
+socket.onerror = function (error) {
+    console.error(`WebSocket Error: ${error.message}`);
+};
+
+socket.onclose = function (e) {
+    console.log("WebSocket connection closed:", e.code, e.reason);
+};
+
+// Function to periodically refresh images
+function refreshImages() {
+    const allImages = document.querySelectorAll('#camera-feeds img, #camera-states img');
+    allImages.forEach(img => {
+        const currentSrc = new URL(img.src);
+        currentSrc.searchParams.set('t', new Date().getTime());
+        img.src = currentSrc.toString();
+    });
+}
+
+// Refresh images every 30 seconds
+setInterval(refreshImages, 30000);
