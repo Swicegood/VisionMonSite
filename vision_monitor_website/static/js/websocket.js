@@ -63,7 +63,7 @@ function updateCameraStates(cameraStates) {
     for (const [cameraId, state] of Object.entries(cameraStates)) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
-        stateDiv.textContent = `${cameraId}: ${state}`;
+        stateDiv.textContent = `${cameraId} ${cameraId.split(' ').slice(0, -2).join(' ')} (Camera ${cameraId.split(' ').slice(-1)}) : ${state}`;
         cameraStatesDiv.appendChild(stateDiv);
     }
 }

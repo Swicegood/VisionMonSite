@@ -63,7 +63,7 @@ function updateCameraStates(cameraStates) {
     for (const [cameraId, state] of Object.entries(cameraStates)) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
-        stateDiv.textContent = `${cameraId}: ${state}`;
+        stateDiv.textContent = `${cameraId.split(' ').slice(0, -2).join(' ')} (Camera ${cameraId.split(' ').slice(-1)}) : ${state}`;
         cameraStatesDiv.appendChild(stateDiv);
     }
 }
@@ -86,8 +86,7 @@ function colorCodeState(element, state) {
 }
 
 socket.onmessage = function (e) {
-    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure.
-    console.log("Received data:", data);
+    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
 
     if (data.message) {
         try {

@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,90 +9,121 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-                body {
-        background-color: #f8f9fa;
-        font-family: 'Arial', sans-serif;
-    }
-    .container-fluid {
-        padding: 20px;
-    }
-    .card {
-        border: none;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        height: calc(100vh - 100px);
-    }
-    .card-header {
-        background-color: #007bff;
-        color: white;
-        border-radius: 15px 15px 0 0;
-    }
-    #camera-feeds, #llm-output {
-        height: calc(100% - 60px);
-        overflow-y: auto;
-        padding: 15px;
-        background-color: #f1f3f5;
-    }
-    .camera-feed, .message {
-        background-color: white;
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .timestamp {
-        font-size: 0.8em;
-        color: #6c757d;
-    }
-    .camera-info {
-        font-weight: bold;
-        color: #007bff;
-    }
-    .description {
-        margin-top: 5px;
-    }
-    .camera-feed img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-    .typing {
-        display: inline-block;
-        width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        animation: typing 2s steps(40, end);
-        animation-fill-mode: forwards;
-    }
-    @keyframes typing {
-        from { width: 0 }
-        to { width: 100% }
-    }
-    #facility-state {
-        padding: 10px;
-        margin-bottom: 20px;
-        border-radius: 10px;
-        font-weight: bold;
-        text-align: center;
-    }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container-fluid {
+            padding: 20px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: calc(100vh - 100px);
+        }
+
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        #camera-feeds,
+        #llm-output {
+            height: calc(100% - 60px);
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f1f3f5;
+        }
+
+        .camera-feed,
+        .message {
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+
+        .camera-info {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .description {
+            margin-top: 5px;
+        }
+
+        .camera-feed img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .typing {
+            display: inline-block;
+            width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typing 2s steps(40, end);
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes typing {
+            from {
+                width: 0
+            }
+
+            to {
+                width: 100%
+            }
+        }
+
+        #facility-state {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+
         #camera-states {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             margin-bottom: 20px;
         }
+
         .camera-state {
-            flex-basis: calc(100% / 16 - 10px);  /* Adjust based on the number of cameras */
+            flex-basis: calc(100% / 8 - 10px);
+            /* Adjusted for 2 rows of 8 cameras */
             padding: 5px;
             margin-bottom: 10px;
             border-radius: 5px;
             font-weight: bold;
             text-align: center;
             font-size: 0.8em;
+            position: relative;
+        }
+
+        .camera-state img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
+
 <body>
     <div class="container-fluid">
         <h1 class="text-center mb-4">Vision Monitor</h1>
