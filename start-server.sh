@@ -20,7 +20,7 @@ ${DAPHNE_EXECUTABLE_PATH}daphne -b 0.0.0.0 -p 8001 config.asgi:application &
 
 # Start Redis Listener
 echo "Starting Redis Listener..."
-python manage.py redis_listener --daemon
+python manage.py redis_listener --daemon &
 
 # Start Nginx
 echo "Starting Nginx..."
