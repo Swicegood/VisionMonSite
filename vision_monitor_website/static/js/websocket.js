@@ -1,7 +1,8 @@
 const socket = new WebSocket('ws://' + window.location.host + '/ws/llm_output/');
 const cameraFeeds = document.getElementById('camera-feeds');
 const llmOutput = document.getElementById('llm-output');
-const facilityState = document.getElementById('facility-state');const overall = document.getElementById('overall');
+const facilityState = document.getElementById('facility-state');
+const overall = document.getElementById('overall');
 const maxCameras = 16;
 const maxLLMMessages = 50;
 const cameraMap = new Map();
@@ -24,7 +25,25 @@ function getLatestImageUrl(cameraIndex) {
     return `/get_latest_image/${cameraIndex}/?t=${new Date().getTime()}`;
 }
 
-
+function updateCameraStates(cameraStates) {
+    const cameraStatesDiv = document.getElementById('camera-states');
+    cameraStatesDiv.innerHTML = '';
+    for (const [cameraId, state] of Object.entries(cameraStates)) {
+        const stateDiv = document.createElement('div');
+        stateDiv.className = 'camera-state';
+        const cameraIndex = cameraId.split(' ').slice(-1)[0];
+        const thumbnailUrl = getLatestImageUrl(cameraIndex);
+        stateDiv.innerHTML = `
+            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${cameraIndex}">
+            <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
+            <div>(Camera ${cameraIndex})</div>
+            <div>${state}</div>
+        `;
+        colorCodeState(stateDiv, state);
+        cameraStatesDiv.appendChild(stateDiv);
+    }
+    setupModalListeners();
+}
 
 function updateCameraFeeds(cameraStates) {
     cameraFeeds.innerHTML = '';
@@ -35,7 +54,7 @@ function updateCameraFeeds(cameraStates) {
         cameraElement.innerHTML = `
             <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
             <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
-            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid">
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
             <div class="camera-info">Description:</div>
             <div class="description">${camera.description}</div>
             <div class="camera-state"></div>
@@ -48,6 +67,18 @@ function updateCameraFeeds(cameraStates) {
         cameraFeeds.appendChild(cameraElement);
     });
     cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
+    setupModalListeners();
+}
+
+function setupModalListeners() {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const cameraIndex = button.getAttribute('data-camera-index');
+        modalImage.src = getLatestImageUrl(cameraIndex);
+    });
 }
 
 function updateLLMOutput() {
@@ -65,24 +96,7 @@ function updateLLMOutput() {
     llmOutput.scrollTop = llmOutput.scrollHeight;
 }
 
-function updateCameraStates(cameraStates) {
-    const cameraStatesDiv = document.getElementById('camera-states');
-    cameraStatesDiv.innerHTML = '';
-    for (const [cameraId, state] of Object.entries(cameraStates)) {
-        const stateDiv = document.createElement('div');
-        stateDiv.className = 'camera-state';
-        const cameraIndex = cameraId.split(' ').slice(-1)[0];
-        const thumbnailUrl = getLatestImageUrl(cameraIndex);
-        stateDiv.innerHTML = `
-            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
-            <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
-            <div>(Camera ${cameraIndex})</div>
-            <div>${state}</div>
-        `;
-        colorCodeState(stateDiv, state);
-        cameraStatesDiv.appendChild(stateDiv);
-    }
-}
+
 
     function colorCodeState(element, state) {
         element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
@@ -197,3 +211,6 @@ function refreshImages() {
 
 // Refresh images every 30 seconds
 setInterval(refreshImages, 30000);
+
+// Initial setup of modal listeners
+document.addEventListener('DOMContentLoaded', setupModalListeners);
