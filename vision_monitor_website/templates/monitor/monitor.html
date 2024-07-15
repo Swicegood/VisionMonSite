@@ -53,6 +53,12 @@
             color: #6c757d;
         }
 
+        .overall {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
         .camera-info {
             font-weight: bold;
             color: #007bff;
@@ -127,6 +133,7 @@
 <body>
     <div class="container-fluid">
         <h1 class="text-center mb-4">Vision Monitor</h1>
+        <div id="overall"></div>
         <div id="facility-state" class="mb-4"></div>
         <div id="camera-states" class="mb-4"></div>
         <div class="row">
@@ -148,7 +155,8 @@
             </div>
         </div>
     </div>
-    
+
     <script src="{% static 'js/websocket.js' %}"></script>
 </body>
+
 </html>

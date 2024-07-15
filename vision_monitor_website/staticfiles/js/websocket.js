@@ -2,6 +2,7 @@ const socket = new WebSocket('ws://' + window.location.host + '/ws/llm_output/')
 const cameraFeeds = document.getElementById('camera-feeds');
 const llmOutput = document.getElementById('llm-output');
 const facilityState = document.getElementById('facility-state');
+const overall = document.getElementById('overall');
 const maxCameras = 16;
 const maxLLMMessages = 50;
 const cameraMap = new Map();
@@ -67,7 +68,7 @@ function updateCameraStates(cameraStates) {
         const thumbnailUrl = `/get_latest_image/${cameraIndex}/`;
         stateDiv.innerHTML = `
             <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
-            <div>${cameraId.split(' ').slice(0, -2).join(' ')}</div>
+            <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
             <div>(Camera ${cameraIndex})</div>
             <div>${state}</div>
         `;
@@ -109,6 +110,8 @@ function updateCameraStates(cameraStates) {
     
                     // Handling structured message content
                     if (innerData.facility_state) {
+                        overall.innerHTML = `
+                        <div class="overall">Overall Facility State: ${new Date().toLocaleString()}</div>`;
                         console.log("Facility state:", innerData.facility_state);
                         facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
                         colorCodeState(facilityState, innerData.facility_state.trim());
@@ -137,8 +140,8 @@ function updateCameraStates(cameraStates) {
         if (parts.length >= 4) {
             const cameraName = parts[0];
             const cameraIndex = parts[1];
-            const timestamp = parts[2];
-            const description = parts.slice(3).join(' ');
+            const timestamp = parts.slice(2, 4).join(' ');
+            const description = parts.slice(4).join(' ');
     
             // Update LLM output
             llmMessages.push({ cameraName, cameraIndex, timestamp, description });

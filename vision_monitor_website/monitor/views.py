@@ -25,15 +25,20 @@ def home(request):
 def monitor(request):
     return render(request, 'monitor/monitor.html')
 
+
+from django.utils import timezone
+
+
+logger = logging.getLogger(__name__)
+
 def get_latest_image(request, camera_index):
     conn = get_db_connection()
     if not conn:
         raise Http404("Database connection failed")
-
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT vb.data
+                SELECT vb.data, vm.timestamp
                 FROM visionmon_metadata vm
                 JOIN visionmon_binary_data vb ON vm.data_id = vb.id
                 WHERE vm.camera_index = %s
@@ -43,8 +48,18 @@ def get_latest_image(request, camera_index):
             result = cursor.fetchone()
         
         if result:
-            image_data = result[0]
-            return HttpResponse(image_data, content_type='image/jpeg')
+            image_data, timestamp = result
+            response = HttpResponse(image_data, content_type='image/jpeg')
+            
+            # Add cache-busting headers
+            response['Cache-Control'] = 'no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            
+            # Add a custom header with the timestamp
+            response['X-Image-Timestamp'] = timestamp.isoformat()
+            
+            return response
         else:
             raise Http404("Image not found")
     except psycopg2.Error as e:
