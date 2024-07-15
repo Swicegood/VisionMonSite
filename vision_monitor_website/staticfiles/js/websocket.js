@@ -63,106 +63,114 @@ function updateCameraStates(cameraStates) {
     for (const [cameraId, state] of Object.entries(cameraStates)) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
-        stateDiv.textContent = `${cameraId.split(' ').slice(0, -2).join(' ')} (Camera ${cameraId.split(' ').slice(-1)}) : ${state}`;
+        const cameraIndex = cameraId.split(' ').slice(-1)[0];
+        const thumbnailUrl = `/get_latest_image/${cameraIndex}/`;
+        stateDiv.innerHTML = `
+            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
+            <div>${cameraId.split(' ').slice(0, -2).join(' ')}</div>
+            <div>(Camera ${cameraIndex})</div>
+            <div>${state}</div>
+        `;
+        colorCodeState(stateDiv, state);
         cameraStatesDiv.appendChild(stateDiv);
     }
 }
 
-function colorCodeState(element, state) {
-    element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
-    if (state.includes('busy')) {
-        element.classList.add('bg-danger', 'text-white');
-    } else if (state.includes('off-hours') || state.includes('night-time')) {
-        element.classList.add('bg-secondary', 'text-white');
-    } else if (state.includes('festival happening')) {
-        element.classList.add('bg-warning');
-    } else if (state.includes('quiet')) {
-        element.classList.add('bg-success', 'text-white');
-    } else if (state.includes('meal time')) {
-        element.classList.add('bg-info', 'text-white');
-    } else {
-        element.classList.add('bg-light');
+    function colorCodeState(element, state) {
+        element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
+        if (state.includes('busy')) {
+            element.classList.add('bg-danger', 'text-white');
+        } else if (state.includes('off-hours') || state.includes('night-time')) {
+            element.classList.add('bg-secondary', 'text-white');
+        } else if (state.includes('festival happening')) {
+            element.classList.add('bg-warning');
+        } else if (state.includes('quiet')) {
+            element.classList.add('bg-success', 'text-white');
+        } else if (state.includes('meal time')) {
+            element.classList.add('bg-info', 'text-white');
+        } else {
+            element.classList.add('bg-light');
+        }
     }
-}
-
-socket.onmessage = function (e) {
-    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
-
-    if (data.message) {
-        try {
-            // The first parse of the message attribute which should reveal another JSON string
-            const intermediateData = JSON.parse(data.message);
-            console.log("Parsed intermediate message data:", intermediateData);
-
-            // Now parse the inner JSON from the intermediateData's message attribute
-            if (intermediateData.message) {
-                const innerData = JSON.parse(intermediateData.message);
-                console.log("Parsed inner message data (facility_state and camera_states):", innerData);
-
-                // Handling structured message content
-                if (innerData.facility_state) {
-                    console.log("Facility state:", innerData.facility_state);
-                    facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
-                    colorCodeState(facilityState, innerData.facility_state.trim());
+    
+    socket.onmessage = function (e) {
+        const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
+    
+        if (data.message) {
+            try {
+                // The first parse of the message attribute which should reveal another JSON string
+                const intermediateData = JSON.parse(data.message);
+                console.log("Parsed intermediate message data:", intermediateData);
+    
+                // Now parse the inner JSON from the intermediateData's message attribute
+                if (intermediateData.message) {
+                    const innerData = JSON.parse(intermediateData.message);
+                    console.log("Parsed inner message data (facility_state and camera_states):", innerData);
+    
+                    // Handling structured message content
+                    if (innerData.facility_state) {
+                        console.log("Facility state:", innerData.facility_state);
+                        facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
+                        colorCodeState(facilityState, innerData.facility_state.trim());
+                    }
+                    if (innerData.camera_states) {
+                        console.log("Camera states:", innerData.camera_states);
+                        updateCameraStates(innerData.camera_states);
+                        updateCameraFeeds(innerData.camera_states);
+                    }
+                } else {
+                    // Handle unstructured messages (e.g., direct camera updates)
+                    handleUnstructuredMessage(intermediateData);
                 }
-                if (innerData.camera_states) {
-                    console.log("Camera states:", innerData.camera_states);
-                    updateCameraStates(innerData.camera_states);
-                    updateCameraFeeds(innerData.camera_states);
-                }
-            } else {
-                // Handle unstructured messages (e.g., direct camera updates)
-                handleUnstructuredMessage(intermediateData);
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                // Handle the message as unstructured data
+                handleUnstructuredMessage(data.message);
             }
-        } catch (error) {
-            console.error("Error parsing JSON:", error);
-            // Handle the message as unstructured data
-            handleUnstructuredMessage(data.message);
+        }
+    };
+    
+    function handleUnstructuredMessage(message) {
+        console.log("Handling unstructured message:", message);
+        // Assuming the message format is "cameraName cameraIndex timestamp description"
+        const parts = message.split(' ');
+        if (parts.length >= 4) {
+            const cameraName = parts[0];
+            const cameraIndex = parts[1];
+            const timestamp = parts[2];
+            const description = parts.slice(3).join(' ');
+    
+            // Update LLM output
+            llmMessages.push({ cameraName, cameraIndex, timestamp, description });
+            if (llmMessages.length > maxLLMMessages) {
+                llmMessages.shift();
+            }
+            updateLLMOutput();
+    
+            // Update camera map
+            cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
+            if (cameraMap.size > maxCameras) {
+                const oldestKey = cameraMap.keys().next().value;
+                cameraMap.delete(oldestKey);
+            }
+            updateCameraFeeds();
+    
+            // Apply typing effect to the latest LLM message
+            const latestMessage = llmOutput.lastElementChild;
+            if (latestMessage) {
+                const descriptionElement = latestMessage.querySelector('.description');
+                descriptionElement.innerHTML = '';
+                typeWriter(descriptionElement, description, 20);
+            }
+        } else {
+            console.error("Received message in unexpected format:", message);
         }
     }
-};
-
-function handleUnstructuredMessage(message) {
-    console.log("Handling unstructured message:", message);
-    // Assuming the message format is "cameraName cameraIndex timestamp description"
-    const parts = message.split(' ');
-    if (parts.length >= 4) {
-        const cameraName = parts[0];
-        const cameraIndex = parts[1];
-        const timestamp = parts[2];
-        const description = parts.slice(3).join(' ');
-
-        // Update LLM output
-        llmMessages.push({ cameraName, cameraIndex, timestamp, description });
-        if (llmMessages.length > maxLLMMessages) {
-            llmMessages.shift();
-        }
-        updateLLMOutput();
-
-        // Update camera map
-        cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
-        if (cameraMap.size > maxCameras) {
-            const oldestKey = cameraMap.keys().next().value;
-            cameraMap.delete(oldestKey);
-        }
-        updateCameraFeeds();
-
-        // Apply typing effect to the latest LLM message
-        const latestMessage = llmOutput.lastElementChild;
-        if (latestMessage) {
-            const descriptionElement = latestMessage.querySelector('.description');
-            descriptionElement.innerHTML = '';
-            typeWriter(descriptionElement, description, 20);
-        }
-    } else {
-        console.error("Received message in unexpected format:", message);
-    }
-}
-
-socket.onerror = function (error) {
-    console.error(`WebSocket Error: ${error.message}`);
-};
-
-socket.onclose = function (e) {
-    console.log("WebSocket connection closed:", e.code, e.reason);
-};
+    
+    socket.onerror = function (error) {
+        console.error(`WebSocket Error: ${error.message}`);
+    };
+    
+    socket.onclose = function (e) {
+        console.log("WebSocket connection closed:", e.code, e.reason);
+    };
