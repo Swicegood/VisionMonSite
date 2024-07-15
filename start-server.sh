@@ -15,9 +15,11 @@ python manage.py collectstatic --noinput
 echo "Starting Daphne..."
 ~/.vision_mon_site/bin/daphne -b 0.0.0.0 -p 8001 config.asgi:application &
 
+echo "Starting Redis Listener..."
+python manage.py redis_listener --daemon
+
 # Start Nginx
 echo "Starting Nginx..."
 nginx -g "daemon off;"
 
-python manage.py redis_listener --daemon
 

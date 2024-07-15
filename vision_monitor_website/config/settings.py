@@ -7,6 +7,15 @@ SECRET_KEY = 'your-secret-key-here'  # Change this to a secure random string
 
 DEBUG = True  # Set to False in production
 
+REDIS_HOST = os.environ.get('REDIS_HOST', '192.168.0.71')
+REDIS_PORT = os.environ.get('REDIS_PORT', 6379)
+
+DB_HOST = os.getenv('DB_HOST', '192.168.0.71')
+DB_NAME = os.getenv('DB_NAME', 'visionmon')
+DB_USER = os.getenv('DB_USER', 'pguser')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'pgpass')
+DB_PORT = os.getenv('DB_PORT', '5432')
+
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -27,7 +36,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('192.168.0.71', 6379)],
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
         },
     },
 }
@@ -66,11 +75,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'visionmon',
-        'USER': 'pguser',
-        'PASSWORD': 'pgpass',
-        'HOST': '192.168.0.71',
-        'PORT': '5432',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     }
 }
 

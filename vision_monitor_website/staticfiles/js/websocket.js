@@ -66,7 +66,10 @@ function updateCameraFeeds(cameraStates) {
         }
         cameraFeeds.appendChild(cameraElement);
     });
+
+    // Always scroll to the bottom
     cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
+
     setupModalListeners();
 }
 
@@ -153,6 +156,36 @@ function updateLLMOutput() {
             }
         }
     };
+    
+    function updateCameraFeeds(cameraStates) {
+        cameraFeeds.innerHTML = '';
+        [...cameraMap.values()].forEach(camera => {
+            const cameraElement = document.createElement('div');
+            cameraElement.className = 'camera-feed';
+            const imageUrl = getLatestImageUrl(camera.cameraIndex);
+            cameraElement.innerHTML = `
+                <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
+                <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
+                <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
+                <div class="camera-info">Description:</div>
+                <div class="description">${camera.description}</div>
+                <div class="camera-state"></div>
+            `;
+            const cameraStateElement = cameraElement.querySelector('.camera-state');
+            if (cameraStates && cameraStates[camera.cameraName]) {
+                cameraStateElement.textContent = cameraStates[camera.cameraName];
+                colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
+            }
+            cameraFeeds.appendChild(cameraElement);
+        });
+        
+        // Ensure scrolling happens after the DOM has been updated
+        setTimeout(() => {
+            cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
+        }, 0);
+    
+        setupModalListeners();
+    }
     
     function handleUnstructuredMessage(message) {
         console.log("Handling unstructured message:", message);
