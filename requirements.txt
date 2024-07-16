@@ -41,3 +41,4 @@ python-daemon
 channels_redis
 discord
 aiohttp
+requests
