@@ -39,3 +39,5 @@ openai
 redis
 python-daemon
 channels_redis
+discord
+aiohttp

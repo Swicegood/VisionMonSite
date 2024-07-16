@@ -11,7 +11,6 @@ import psycopg2
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpRequest
-from django.contrib.sites.models import Site
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +57,9 @@ class Command(BaseCommand):
                         logger.info(f"Received message from Redis channel {channel}: {data}")
 
                         if channel == REDIS_STATE_RESULT_CHANNEL:
-                            # Store state_result in the database
+                            # Store raw message in the database
                             await self.store_state_result(data)
-                            # Trigger notification
+                            # Trigger notification with raw message
                             await self.trigger_notification(data)
 
                         # Forward the message to the WebSocket group
@@ -89,7 +88,7 @@ class Command(BaseCommand):
             logger.info("Redis connection closed")
 
     @sync_to_async
-    def store_state_result(self, state_result):
+    def store_state_result(self, raw_message):
         try:
             conn = psycopg2.connect(
                 host=settings.DATABASES['default']['HOST'],
@@ -100,30 +99,30 @@ class Command(BaseCommand):
             )
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO state_result (status, timestamp)
+                    INSERT INTO state_result (raw_message, timestamp)
                     VALUES (%s, %s)
-                """, (state_result, timezone.now()))
+                """, (raw_message, timezone.now()))
             conn.commit()
-            logger.info(f"Stored state_result in database: {state_result}")
+            logger.info(f"Stored raw message in database")
         except Exception as e:
-            logger.error(f"Error storing state_result in database: {str(e)}")
+            logger.error(f"Error storing raw message in database: {str(e)}")
         finally:
             if conn:
                 conn.close()
 
     @sync_to_async
-    def trigger_notification(self, state_result):
+    def trigger_notification(self, raw_message):
         try:
             # Create a mock request object
             request = HttpRequest()
-            request.META['SERVER_NAME'] = Site.objects.get_current().domain
+            request.META['SERVER_NAME'] = 'example.com'  # Use a default domain or get it from settings
             request.META['SERVER_PORT'] = '8000'  # Adjust if your port is different
 
             # Import here to avoid circular import
             from monitor.views import notify
 
-            # Call the notify function
-            notify(request, state_result)
-            logger.info(f"Triggered notification for state_result: {state_result}")
+            # Call the notify function with raw message
+            notify(request, raw_message)
+            logger.info(f"Triggered notification with raw message")
         except Exception as e:
             logger.error(f"Error triggering notification: {str(e)}")

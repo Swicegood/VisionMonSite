@@ -25,9 +25,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites', 
     'monitor.apps.MonitorConfig',  # Add your app here
     'channels'
 ]
+
+SITE_ID = 1
 
 # Add Channels layer configuration
 ASGI_APPLICATION = 'routing.application'

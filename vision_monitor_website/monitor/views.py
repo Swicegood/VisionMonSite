@@ -3,9 +3,14 @@ from django.http import HttpResponse, Http404, JsonResponse
 from django.conf import settings
 import psycopg2
 import logging
+from .discord_client import send_discord
 from django.utils import timezone
 from . import discord_client
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
+import os
+import tempfile
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +34,10 @@ def monitor(request):
     return render(request, 'monitor/monitor.html')
 
 def get_latest_image(request, camera_index):
-    conn = get_db_connection()
-    if not conn:
+     conn = get_db_connection()
+     if not conn:
         raise Http404("Database connection failed")
-    try:
+     try:
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT vb.data, vm.timestamp
@@ -59,12 +64,12 @@ def get_latest_image(request, camera_index):
                 return response
             else:
                 raise Http404("Image not found")
-    except psycopg2.Error as e:
+     except psycopg2.Error as e:
         logger.error(f"Database error: {e}")
         raise Http404("Database error occurred")
-    finally:
+     finally:
         conn.close()
-
+        
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -87,6 +92,16 @@ def test_websocket(request):
     
     return render(request, 'monitor/monitor.html')
 
+def parse_facility_state(raw_message):
+    try:
+        outer_data = json.loads(raw_message)
+        return outer_data.get('facility_state', '').strip(), outer_data.get('camera_states', {})
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing JSON: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error while parsing facility state: {str(e)}")
+    return None, {}
+
 def get_facility_status():
     conn = get_db_connection()
     if not conn:
@@ -95,54 +110,148 @@ def get_facility_status():
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT status
-                FROM facility_status
+                SELECT raw_message
+                FROM state_result
                 ORDER BY timestamp DESC
                 LIMIT 1
             """)
             result = cursor.fetchone()
-            return result[0] if result else None
+            if result:
+                raw_message = result[0]
+                return parse_facility_state(raw_message)
+            return None
     except psycopg2.Error as e:
         logger.error(f"Database error when fetching facility status: {e}")
         return None
     finally:
         conn.close()
 
-def notify():
-    status = get_facility_status()
+def notify(request, raw_message=None):
+    if raw_message is None:
+        status = get_facility_status()
+    else:
+        status = parse_facility_state(raw_message)
+    
     if status == "busy":
         try:
-            latest_image = get_latest_image(None, 1)  # Assuming camera_index 1 for the main view
-            if isinstance(latest_image, HttpResponse):
-                image_data = latest_image.content
-                message = f"Facility status is busy! Time: {timezone.now()}"
-                discord_client.send_discord(image_data, message, str(timezone.now()))
-                logger.info("Discord notification sent successfully")
-            else:
-                logger.error("Failed to get latest image for Discord notification")
+            latest_image = get_latest_image(request, 1)  # Assuming camera_index 1 for the main view
+            logger.info("Latest image retrieved successfully")
         except Exception as e:
-            logger.error(f"Error sending Discord notification: {str(e)}")
+            logger.error(f"Error retrieving latest image: {str(e)}")
+            latest_image = None
+            
+        if isinstance(latest_image, HttpResponse) and latest_image.status_code == 200:
+            # Create a temporary file to store the image
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                temp_image.write(latest_image.content)
+                temp_image_path = temp_image.name
+            
+            logger.info(f"Temporary image file created at: {temp_image_path}")
+            message = f"Facility status is busy! Time: {timezone.now()}"
+        else:
+            logger.error("Failed to get latest image for Discord notification")
+        try:
+            success = send_discord(temp_image_path, message, str(timezone.now()))
+            logger.info(f"send_discord called with image. Result: {success}")
+        except Exception as e:
+            logger.error(f"Error in send_discord: {str(e)}")
+            success = False
+        os.unlink(temp_image_path)
+        logger.info("Temporary image file deleted")
+        
+        if success:
+            logger.info("Notification sent successfully")
+            
     else:
         logger.info(f"Current facility status is: {status}. No notification sent.")
+        
+        
 
 @require_http_methods(["GET"])
 def test_notification(request):
     try:
-        # Force the status to be "busy" for testing
-        status = "busy"
+        message = "TEST NOTIFICATION: This is a test message with the latest image."
+        current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        latest_image = get_latest_image(None, 1)  # Assuming camera_index 1 for the main view
-        if isinstance(latest_image, HttpResponse):
-            image_data = latest_image.content
-            message = f"TEST NOTIFICATION: Facility status is {status}! Time: {timezone.now()}"
-            discord_client.send_discord(image_data, message, str(timezone.now()))
-            logger.info("Test Discord notification sent successfully")
-            return JsonResponse({"status": "success", "message": "Test notification sent successfully"})
+        # Get the latest image
+        try:
+            latest_image = get_latest_image(request, 1)  # Assuming camera_index 1 for the main view
+            logger.info("Latest image retrieved successfully")
+        except Exception as e:
+            logger.error(f"Error retrieving latest image: {str(e)}")
+            latest_image = None
+
+        if isinstance(latest_image, HttpResponse) and latest_image.status_code == 200:
+            # Create a temporary file to store the image
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                temp_image.write(latest_image.content)
+                temp_image_path = temp_image.name
+            
+            logger.info(f"Temporary image file created at: {temp_image_path}")
+            
+            # Send the notification with the image
+            try:
+                success = send_discord(temp_image_path, message, current_time)
+                logger.info(f"send_discord called with image. Result: {success}")
+            except Exception as e:
+                logger.error(f"Error in send_discord: {str(e)}")
+                success = False
+            
+            # Delete the temporary file
+            os.unlink(temp_image_path)
+            logger.info("Temporary image file deleted")
+            
+            if success:
+                return JsonResponse({"status": "success", "message": "Test notification with image sent successfully"})
+            else:
+                return JsonResponse({"status": "error", "message": "Failed to send test notification with image"}, status=500)
         else:
-            logger.error("Failed to get latest image for test Discord notification")
-            return JsonResponse({"status": "error", "message": "Failed to get latest image"}, status=500)
+            logger.warning("Latest image not available or invalid")
+            # If we couldn't get the latest image, send notification without image
+            try:
+                success = send_discord(None, message + " (Image unavailable)", current_time)
+                logger.info(f"send_discord called without image. Result: {success}")
+            except Exception as e:
+                logger.error(f"Error in send_discord: {str(e)}")
+                success = False
+            
+            if success:
+                return JsonResponse({"status": "success", "message": "Test notification sent successfully (without image)"})
+            else:
+                return JsonResponse({"status": "error", "message": "Failed to send test notification"}, status=500)
     except Exception as e:
-        logger.error(f"Error sending test Discord notification: {str(e)}")
+        logger.exception("Unexpected error in test_notification view")
+        return JsonResponse({"status": "error", "message": f"Unexpected error: {str(e)}"}, status=500)
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_state(request):
+    try:
+        raw_message = request.body.decode('utf-8')
+        
+        conn = get_db_connection()
+        if not conn:
+            return JsonResponse({"status": "error", "message": "Database connection failed"}, status=500)
+        
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO facility_status (raw_message, timestamp)
+                    VALUES (%s, %s)
+                """, (raw_message, timezone.now()))
+            conn.commit()
+            
+            # Trigger notification after updating the state
+            notify(request, raw_message)
+            
+            return JsonResponse({"status": "success", "message": "State updated and notification sent"})
+        except psycopg2.Error as e:
+            logger.error(f"Database error when updating state: {e}")
+            return JsonResponse({"status": "error", "message": "Database error occurred"}, status=500)
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error(f"Error in update_state: {str(e)}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
 # You might want to call notify() periodically or based on certain events
 # For example, you could set up a Django management command or a celery task to run this function
