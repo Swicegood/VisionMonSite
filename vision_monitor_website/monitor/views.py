@@ -5,7 +5,6 @@ import psycopg2
 import logging
 from .discord_client import send_discord
 from django.utils import timezone
-from . import discord_client
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
