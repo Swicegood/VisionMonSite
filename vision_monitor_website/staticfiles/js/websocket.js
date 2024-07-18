@@ -48,6 +48,10 @@ function getLatestImageUrl(cameraIndex) {
     return `/get_latest_image/${cameraIndex}/?t=${new Date().getTime()}`;
 }
 
+function getCompositeImageUrl(cameraName) {
+    return `/get_composite_image/${cameraName}/?t=${new Date().getTime()}`;
+}
+
 function updateCameraStates(cameraStates) {
     const cameraStatesDiv = document.getElementById('camera-states');
     cameraStatesDiv.innerHTML = '';
@@ -55,9 +59,11 @@ function updateCameraStates(cameraStates) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
         const cameraIndex = cameraId.split(' ').slice(-1)[0];
-        const thumbnailUrl = getLatestImageUrl(cameraIndex);
+        const thumbnailUrl = getCompositeImageUrl(cameraId.split(' ')[0]);
         stateDiv.innerHTML = `
-            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${cameraIndex}">
+            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid" 
+                data-bs-toggle="modal" data-bs-target="#imageModal" 
+                data-camera-name="${cameraId.split(' ')[0]}">
             <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
             <div>(Camera ${cameraIndex})</div>
             <div>${state}</div>
@@ -102,8 +108,8 @@ function setupModalListeners() {
 
     modal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
-        const cameraIndex = button.getAttribute('data-camera-index');
-        modalImage.src = getLatestImageUrl(cameraIndex);
+        const cameraName = button.getAttribute('data-camera-name');
+        modalImage.src = getCompositeImageUrl(cameraName);
     });
 }
 
@@ -125,9 +131,9 @@ function updateLLMOutput() {
 
 function colorCodeState(element, state) {
     element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
-    
+
     const lowerState = state.toLowerCase();
-    
+
     if (lowerState.includes('busy')) {
         element.classList.add('bg-danger', 'text-white');
     } else if (lowerState.includes('off-hours') || lowerState.includes('night-time')) {
@@ -142,53 +148,53 @@ function colorCodeState(element, state) {
         element.classList.add('bg-light');
     }
 }
-    
-    socket.onmessage = function (e) {
-        const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
-    
-        if (data.message) {
-            try {
-                // The first parse of the message attribute which should reveal another JSON string
-                const intermediateData = JSON.parse(data.message);
-                console.log("Parsed intermediate message data:", intermediateData);
-    
-                // Now parse the inner JSON from the intermediateData's message attribute
-                if (intermediateData.message) {
-                    const innerData = JSON.parse(intermediateData.message);
-                    console.log("Parsed inner message data (facility_state and camera_states):", innerData);
-    
-                    // Handling structured message content
-                    if (innerData.facility_state) {
-                        overall.innerHTML = `
+
+socket.onmessage = function (e) {
+    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
+
+    if (data.message) {
+        try {
+            // The first parse of the message attribute which should reveal another JSON string
+            const intermediateData = JSON.parse(data.message);
+            console.log("Parsed intermediate message data:", intermediateData);
+
+            // Now parse the inner JSON from the intermediateData's message attribute
+            if (intermediateData.message) {
+                const innerData = JSON.parse(intermediateData.message);
+                console.log("Parsed inner message data (facility_state and camera_states):", innerData);
+
+                // Handling structured message content
+                if (innerData.facility_state) {
+                    overall.innerHTML = `
                         <div class="overall">Overall Facility State: ${new Date().toLocaleString()}</div>`;
-                        console.log("Facility state:", innerData.facility_state);
-                        facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
-                        colorCodeState(facilityState, innerData.facility_state.trim());
-                    }
-                    if (innerData.camera_states) {
-                        console.log("Camera states:", innerData.camera_states);
-                        updateCameraStates(innerData.camera_states);
-                        updateCameraFeeds(innerData.camera_states);
-                    }
-                } else {
-                    // Handle unstructured messages (e.g., direct camera updates)
-                    handleUnstructuredMessage(intermediateData);
+                    console.log("Facility state:", innerData.facility_state);
+                    facilityState.textContent = innerData.facility_state.trim();  // Use trim() to remove any extra spaces
+                    colorCodeState(facilityState, innerData.facility_state.trim());
                 }
-            } catch (error) {
-                console.error("Error parsing JSON:", error);
-                // Handle the message as unstructured data
-                handleUnstructuredMessage(data.message);
+                if (innerData.camera_states) {
+                    console.log("Camera states:", innerData.camera_states);
+                    updateCameraStates(innerData.camera_states);
+                    updateCameraFeeds(innerData.camera_states);
+                }
+            } else {
+                // Handle unstructured messages (e.g., direct camera updates)
+                handleUnstructuredMessage(intermediateData);
             }
+        } catch (error) {
+            console.error("Error parsing JSON:", error);
+            // Handle the message as unstructured data
+            handleUnstructuredMessage(data.message);
         }
-    };
-    
-    function updateCameraFeeds(cameraStates) {
-        cameraFeeds.innerHTML = '';
-        [...cameraMap.values()].forEach(camera => {
-            const cameraElement = document.createElement('div');
-            cameraElement.className = 'camera-feed';
-            const imageUrl = getLatestImageUrl(camera.cameraIndex);
-            cameraElement.innerHTML = `
+    }
+};
+
+function updateCameraFeeds(cameraStates) {
+    cameraFeeds.innerHTML = '';
+    [...cameraMap.values()].forEach(camera => {
+        const cameraElement = document.createElement('div');
+        cameraElement.className = 'camera-feed';
+        const imageUrl = getLatestImageUrl(camera.cameraIndex);
+        cameraElement.innerHTML = `
                 <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
                 <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
                 <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
@@ -196,58 +202,58 @@ function colorCodeState(element, state) {
                 <div class="description">${camera.description}</div>
                 <div class="camera-state"></div>
             `;
-            const cameraStateElement = cameraElement.querySelector('.camera-state');
-            if (cameraStates && cameraStates[camera.cameraName]) {
-                cameraStateElement.textContent = cameraStates[camera.cameraName];
-                colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
-            }
-            cameraFeeds.appendChild(cameraElement);
-        });
-        
-        // Ensure scrolling happens after the DOM has been updated
-        setTimeout(() => {
-            cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
-        }, 0);
-    
-        setupModalListeners();
-    }
-    
-    function handleUnstructuredMessage(message) {
-        console.log("Handling unstructured message:", message);
-        // Assuming the message format is "cameraName cameraIndex timestamp description"
-        const parts = message.split(' ');
-        if (parts.length >= 4) {
-            const cameraName = parts[0];
-            const cameraIndex = parts[1];
-            const timestamp = parts.slice(2, 4).join(' ');
-            const description = parts.slice(4).join(' ');
-    
-            // Update LLM output
-            llmMessages.push({ cameraName, cameraIndex, timestamp, description });
-            if (llmMessages.length > maxLLMMessages) {
-                llmMessages.shift();
-            }
-            updateLLMOutput();
-    
-            // Update camera map
-            cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
-            if (cameraMap.size > maxCameras) {
-                const oldestKey = cameraMap.keys().next().value;
-                cameraMap.delete(oldestKey);
-            }
-            updateCameraFeeds();
-    
-            // Apply typing effect to the latest LLM message
-            const latestMessage = llmOutput.lastElementChild;
-            if (latestMessage) {
-                const descriptionElement = latestMessage.querySelector('.description');
-                descriptionElement.innerHTML = '';
-                typeWriter(descriptionElement, description, 20);
-            }
-        } else {
-            console.error("Received message in unexpected format:", message);
+        const cameraStateElement = cameraElement.querySelector('.camera-state');
+        if (cameraStates && cameraStates[camera.cameraName]) {
+            cameraStateElement.textContent = cameraStates[camera.cameraName];
+            colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
         }
+        cameraFeeds.appendChild(cameraElement);
+    });
+
+    // Ensure scrolling happens after the DOM has been updated
+    setTimeout(() => {
+        cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
+    }, 0);
+
+    setupModalListeners();
+}
+
+function handleUnstructuredMessage(message) {
+    console.log("Handling unstructured message:", message);
+    // Assuming the message format is "cameraName cameraIndex timestamp description"
+    const parts = message.split(' ');
+    if (parts.length >= 4) {
+        const cameraName = parts[0];
+        const cameraIndex = parts[1];
+        const timestamp = parts.slice(2, 4).join(' ');
+        const description = parts.slice(4).join(' ');
+
+        // Update LLM output
+        llmMessages.push({ cameraName, cameraIndex, timestamp, description });
+        if (llmMessages.length > maxLLMMessages) {
+            llmMessages.shift();
+        }
+        updateLLMOutput();
+
+        // Update camera map
+        cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
+        if (cameraMap.size > maxCameras) {
+            const oldestKey = cameraMap.keys().next().value;
+            cameraMap.delete(oldestKey);
+        }
+        updateCameraFeeds();
+
+        // Apply typing effect to the latest LLM message
+        const latestMessage = llmOutput.lastElementChild;
+        if (latestMessage) {
+            const descriptionElement = latestMessage.querySelector('.description');
+            descriptionElement.innerHTML = '';
+            typeWriter(descriptionElement, description, 20);
+        }
+    } else {
+        console.error("Received message in unexpected format:", message);
     }
+}
 
 socket.onerror = function (error) {
     console.error(`WebSocket Error: ${error.message}`);
@@ -279,7 +285,7 @@ function updateFacilityState(state) {
 setInterval(refreshImages, 30000);
 
 // Initial setup of modal listeners
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializePage();
     setupModalListeners();
 });

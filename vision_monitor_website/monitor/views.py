@@ -12,6 +12,12 @@ import os
 import tempfile
 from django.shortcuts import render
 from django.db import connection
+import redis
+import base64
+import json
+
+# Initialize Redis connection
+redis_client = redis.Redis(host='192.168.0.71', port=6379)
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +69,15 @@ def monitor(request):
         """)
         llm_outputs = cursor.fetchall()
 
+    # Fetch composite images from Redis
+    composite_images = {}
+    for analysis in latest_frame_analyses:
+        camera_id = analysis[0]
+        composite_key = f'composite_{camera_id}'
+        composite_data = redis_client.get(composite_key)
+        if composite_data:
+            composite_images[camera_id] = base64.b64encode(composite_data).decode('utf-8')
+
     initial_data = {
         'facility_state': facility_state,
         'camera_states': camera_states,
@@ -71,7 +86,8 @@ def monitor(request):
                 'cameraName': analysis[0],
                 'cameraIndex': analysis[1],
                 'timestamp': analysis[2].isoformat(),
-                'description': analysis[3]
+                'description': analysis[3],
+                'compositeImage': composite_images.get(analysis[0], '')  # Add composite image data
             } for analysis in latest_frame_analyses
         ],
         'llm_outputs': [
@@ -84,8 +100,12 @@ def monitor(request):
         ]
     }
 
-    return render(request, 'monitor/monitor.html', {'initial_data': initial_data})
-
+    return render(request, 'monitor/monitor.html', {
+        'initial_data': initial_data,
+        'composite_images': composite_images  # Add composite images to the context
+    })
+    
+    
 def get_latest_image(request, camera_index):
      conn = get_db_connection()
      if not conn:
@@ -122,6 +142,14 @@ def get_latest_image(request, camera_index):
         raise Http404("Database error occurred")
      finally:
         conn.close()
+        
+def get_composite_image(request, camera_name):
+    composite_key = f'composite_{camera_name}'
+    composite_data = redis_client.get(composite_key)
+    if composite_data:
+        return HttpResponse(composite_data, content_type='image/png')
+    else:
+        return HttpResponse(status=404)
         
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync

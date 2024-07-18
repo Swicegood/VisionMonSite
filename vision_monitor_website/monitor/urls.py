@@ -16,4 +16,5 @@ urlpatterns = [
     path('test-notification/', views.test_notification, name='test_notification'),
     path('favicon.ico', serve_favicon),
     path('get_latest_image/<int:camera_index>/', views.get_latest_image, name='get_latest_image'),
+    path('get_composite_image/<str:camera_name>/', views.get_composite_image, name='get_composite_image'),
 ]
