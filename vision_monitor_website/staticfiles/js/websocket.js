@@ -136,13 +136,14 @@ function colorCodeState(element, state) {
 
     if (lowerState.includes('busy')) {
         element.classList.add('bg-danger', 'text-white');
-    } else if (lowerState.includes('off-hours') || lowerState.includes('night-time')) {
+    } else if (lowerState.includes('night-time')) {
         element.classList.add('bg-secondary', 'text-white');
-    } else if (lowerState.includes('festival happening')) {
+    } else if (lowerState.includes('festival happening') || lowerState.includes('crowd gathering') 
+        || lowerState.includes('eating') ) {
         element.classList.add('bg-warning');
     } else if (lowerState.includes('quiet')) {
         element.classList.add('bg-success', 'text-white');
-    } else if (lowerState.includes('meal time')) {
+    } else if (lowerState.includes('person')) {
         element.classList.add('bg-info', 'text-white');
     } else {
         element.classList.add('bg-light');
