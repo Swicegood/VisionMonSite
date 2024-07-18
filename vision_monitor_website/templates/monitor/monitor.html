@@ -31,7 +31,13 @@
             border-radius: 15px 15px 0 0;
         }
 
-        #camera-feeds,
+        #camera-feeds{
+            height: calc(400%);
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f1f3f5;
+        }
+
         #llm-output {
             height: calc(100% - 60px);
             overflow-y: auto;
@@ -59,6 +65,7 @@
             text-align: center;
             margin-bottom: 20px;
         }
+
         .camera-info {
             font-weight: bold;
             color: #007bff;
@@ -127,20 +134,32 @@
             border-radius: 5px;
             margin-bottom: 5px;
         }
+
         .modal-dialog {
             max-width: 90%;
             margin: 1.75rem auto;
         }
+
         .modal-content {
             background-color: transparent;
             border: none;
         }
+
         .modal-body {
             padding: 0;
         }
+
         .modal-body img {
             width: 100%;
             height: auto;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            max-height: 80vh;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -157,7 +176,9 @@
                     <div class="card-header">
                         <h2 class="mb-0"><i class="fas fa-video"></i> Camera Feeds</h2>
                     </div>
-                    <div id="camera-feeds"></div>
+                    <div id="camera-feeds" class="camera-grid">
+                        <!-- Camera feeds will be dynamically inserted here -->
+                    </div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -184,7 +205,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {{ initial_data|json_script:"initial-data" }}
-    
+
     <script>
         // Safely parse the initial data
         var initialData = JSON.parse(document.getElementById('initial-data').textContent);

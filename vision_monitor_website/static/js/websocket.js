@@ -8,8 +8,6 @@ const maxLLMMessages = 50;
 const cameraMap = new Map();
 const llmMessages = [];
 
-
-// Initialize the page with data from the server
 function initializePage() {
     if (initialData.facility_state) {
         updateFacilityState(initialData.facility_state);
@@ -79,6 +77,7 @@ function updateCameraFeeds(cameraStates) {
     [...cameraMap.values()].forEach(camera => {
         const cameraElement = document.createElement('div');
         cameraElement.className = 'camera-feed';
+        cameraElement.id = `camera-${camera.cameraIndex}`;
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
         cameraElement.innerHTML = `
             <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
@@ -95,13 +94,8 @@ function updateCameraFeeds(cameraStates) {
         }
         cameraFeeds.appendChild(cameraElement);
     });
-
-    // Always scroll to the bottom
-    cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
-
     setupModalListeners();
 }
-
 function setupModalListeners() {
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
@@ -128,7 +122,32 @@ function updateLLMOutput() {
     llmOutput.scrollTop = llmOutput.scrollHeight;
 }
 
+function updateSingleCamera(camera) {
+    const cameraElement = document.getElementById(`camera-${camera.cameraIndex}`);
+    if (cameraElement) {
+        const imageElement = cameraElement.querySelector('img');
+        const timestampElement = cameraElement.querySelector('.timestamp');
+        const descriptionElement = cameraElement.querySelector('.description');
 
+        imageElement.src = getLatestImageUrl(camera.cameraIndex);
+        timestampElement.textContent = new Date(camera.timestamp).toLocaleString();
+        descriptionElement.textContent = camera.description;
+    }
+}
+
+function addLLMMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message';
+    messageElement.innerHTML = `
+        <div class="timestamp">${new Date(message.timestamp).toLocaleString()}</div>
+        <div class="camera-info">Camera ${message.cameraName} (Index: ${message.cameraIndex})</div>
+        <div class="description">${message.description}</div>
+    `;
+    llmOutput.insertBefore(messageElement, llmOutput.firstChild);
+    if (llmOutput.children.length > maxLLMMessages) {
+        llmOutput.removeChild(llmOutput.lastChild);
+    }
+}
 function colorCodeState(element, state) {
     element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
 
@@ -150,9 +169,8 @@ function colorCodeState(element, state) {
     }
 }
 
-socket.onmessage = function (e) {
-    const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
-
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
     if (data.message) {
         try {
             // The first parse of the message attribute which should reveal another JSON string
@@ -175,7 +193,7 @@ socket.onmessage = function (e) {
                 if (innerData.camera_states) {
                     console.log("Camera states:", innerData.camera_states);
                     updateCameraStates(innerData.camera_states);
-                    updateCameraFeeds(innerData.camera_states);
+                    updateSingleCamera(camera);
                 }
             } else {
                 // Handle unstructured messages (e.g., direct camera updates)
@@ -189,35 +207,6 @@ socket.onmessage = function (e) {
     }
 };
 
-function updateCameraFeeds(cameraStates) {
-    cameraFeeds.innerHTML = '';
-    [...cameraMap.values()].forEach(camera => {
-        const cameraElement = document.createElement('div');
-        cameraElement.className = 'camera-feed';
-        const imageUrl = getLatestImageUrl(camera.cameraIndex);
-        cameraElement.innerHTML = `
-                <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
-                <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
-                <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
-                <div class="camera-info">Description:</div>
-                <div class="description">${camera.description}</div>
-                <div class="camera-state"></div>
-            `;
-        const cameraStateElement = cameraElement.querySelector('.camera-state');
-        if (cameraStates && cameraStates[camera.cameraName]) {
-            cameraStateElement.textContent = cameraStates[camera.cameraName];
-            colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
-        }
-        cameraFeeds.appendChild(cameraElement);
-    });
-
-    // Ensure scrolling happens after the DOM has been updated
-    setTimeout(() => {
-        cameraFeeds.scrollTop = cameraFeeds.scrollHeight;
-    }, 0);
-
-    setupModalListeners();
-}
 
 function handleUnstructuredMessage(message) {
     console.log("Handling unstructured message:", message);
@@ -284,8 +273,6 @@ function updateFacilityState(state) {
 
 // Refresh images every 30 seconds
 setInterval(refreshImages, 30000);
-
-// Initial setup of modal listeners
 document.addEventListener('DOMContentLoaded', function () {
     initializePage();
     setupModalListeners();
