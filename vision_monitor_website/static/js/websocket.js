@@ -8,6 +8,29 @@ const maxLLMMessages = 50;
 const cameraMap = new Map();
 const llmMessages = [];
 
+
+// Initialize the page with data from the server
+function initializePage() {
+    if (initialData.facility_state) {
+        updateFacilityState(initialData.facility_state);
+    }
+    if (initialData.camera_states) {
+        updateCameraStates(initialData.camera_states);
+    }
+    if (initialData.camera_feeds) {
+        initialData.camera_feeds.forEach(feed => {
+            cameraMap.set(feed.cameraIndex, feed);
+        });
+        updateCameraFeeds(initialData.camera_states);
+    }
+    if (initialData.llm_outputs) {
+        initialData.llm_outputs.forEach(output => {
+            llmMessages.push(output);
+        });
+        updateLLMOutput();
+    }
+}
+
 function typeWriter(element, text, speed) {
     let i = 0;
     function type() {
@@ -100,23 +123,25 @@ function updateLLMOutput() {
 }
 
 
-
-    function colorCodeState(element, state) {
-        element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
-        if (state.toLowercase().includes('busy')) {
-            element.classList.add('bg-danger', 'text-white');
-        } else if (state.toLowercase().includes('off-hours') || state.includes('night-time')) {
-            element.classList.add('bg-secondary', 'text-white');
-        } else if (state.toLowercase().includes('festival happening')) {
-            element.classList.add('bg-warning');
-        } else if (state.toLowerCase().includes('quiet')) {
-            element.classList.add('bg-success', 'text-white');
-        } else if (state.toLowercase().includes('meal time')) {
-            element.classList.add('bg-info', 'text-white');
-        } else {
-            element.classList.add('bg-light');
-        }
+function colorCodeState(element, state) {
+    element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
+    
+    const lowerState = state.toLowerCase();
+    
+    if (lowerState.includes('busy')) {
+        element.classList.add('bg-danger', 'text-white');
+    } else if (lowerState.includes('off-hours') || lowerState.includes('night-time')) {
+        element.classList.add('bg-secondary', 'text-white');
+    } else if (lowerState.includes('festival happening')) {
+        element.classList.add('bg-warning');
+    } else if (lowerState.includes('quiet')) {
+        element.classList.add('bg-success', 'text-white');
+    } else if (lowerState.includes('meal time')) {
+        element.classList.add('bg-info', 'text-white');
+    } else {
+        element.classList.add('bg-light');
     }
+}
     
     socket.onmessage = function (e) {
         const data = JSON.parse(e.data);  // First level of parsing to get the outer structure
@@ -242,8 +267,19 @@ function refreshImages() {
     });
 }
 
+
+function updateFacilityState(state) {
+    const stateTimestamp = initialData.facility_state.timestamp || new Date().toLocaleString();
+    overall.innerHTML = `<div class="overall">Overall Facility State: ${stateTimestamp}</div>`;
+    facilityState.textContent = state.trim();
+    colorCodeState(facilityState, state.trim());
+}
+
 // Refresh images every 30 seconds
 setInterval(refreshImages, 30000);
 
 // Initial setup of modal listeners
-document.addEventListener('DOMContentLoaded', setupModalListeners);
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+    setupModalListeners();
+});

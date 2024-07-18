@@ -10,6 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import os
 import tempfile
+from django.shortcuts import render
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +31,60 @@ def get_db_connection():
 def home(request):
     return render(request, 'monitor/home.html')
 
+
+
 def monitor(request):
-    return render(request, 'monitor/monitor.html')
+    with connection.cursor() as cursor:
+        # Fetch the latest facility state
+        cursor.execute("""
+            SELECT raw_message, timestamp
+            FROM state_result
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """)
+        raw_message = cursor.fetchone()
+        facility_state, camera_states = parse_facility_state(raw_message[0]) if raw_message else (None, {})
+
+        # Fetch the latest frame analyses for each camera
+        cursor.execute("""
+            SELECT DISTINCT ON (camera_id)
+                camera_id, camera_index, timestamp, description
+            FROM visionmon_metadata
+            ORDER BY camera_id, timestamp DESC
+        """)
+        latest_frame_analyses = cursor.fetchall()
+
+        # Fetch the last 50 LLM outputs
+        cursor.execute("""
+            SELECT camera_id, camera_index, timestamp, description
+            FROM visionmon_metadata
+            ORDER BY timestamp DESC
+            LIMIT 50
+        """)
+        llm_outputs = cursor.fetchall()
+
+    initial_data = {
+        'facility_state': facility_state,
+        'camera_states': camera_states,
+        'camera_feeds': [
+            {
+                'cameraName': analysis[0],
+                'cameraIndex': analysis[1],
+                'timestamp': analysis[2].isoformat(),
+                'description': analysis[3]
+            } for analysis in latest_frame_analyses
+        ],
+        'llm_outputs': [
+            {
+                'cameraName': output[0],
+                'cameraIndex': output[1],
+                'timestamp': output[2].isoformat(),
+                'description': output[3]
+            } for output in llm_outputs
+        ]
+    }
+
+    return render(request, 'monitor/monitor.html', {'initial_data': initial_data})
 
 def get_latest_image(request, camera_index):
      conn = get_db_connection()
