@@ -103,15 +103,15 @@ function updateLLMOutput() {
 
     function colorCodeState(element, state) {
         element.classList.remove('bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
-        if (state.includes('busy')) {
+        if (state.toLowercase().includes('busy')) {
             element.classList.add('bg-danger', 'text-white');
-        } else if (state.includes('off-hours') || state.includes('night-time')) {
+        } else if (state.toLowercase().includes('off-hours') || state.includes('night-time')) {
             element.classList.add('bg-secondary', 'text-white');
-        } else if (state.includes('festival happening')) {
+        } else if (state.toLowercase().includes('festival happening')) {
             element.classList.add('bg-warning');
-        } else if (state.includes('quiet')) {
+        } else if (state.toLowerCase().includes('quiet')) {
             element.classList.add('bg-success', 'text-white');
-        } else if (state.includes('meal time')) {
+        } else if (state.toLowercase().includes('meal time')) {
             element.classList.add('bg-info', 'text-white');
         } else {
             element.classList.add('bg-light');
