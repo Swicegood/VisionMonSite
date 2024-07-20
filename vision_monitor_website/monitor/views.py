@@ -15,12 +15,19 @@ from django.db import connection
 import redis
 import base64
 import json
+from collections import deque, Counter
+from datetime import datetime, timedelta
 
 # Initialize Redis connection
 redis_client = redis.Redis(host='192.168.0.71', port=6379)
 
 logger = logging.getLogger(__name__)
 
+# New dictionary to store the sliding window of states for each camera
+camera_state_windows = {}
+
+# List of key phrases for camera states
+state_key_phrases = [ "busy", "festival happening", "crowd gathering", "night-time", "quiet", "person present", "people eating"]
 
 camera_names = {
     "I6Dvhhu1azyV9rCu": "Audio_Visual", "oaQllpjP0sk94nCV": "Bhoga_Shed", "PxnDZaXu2awYbMmS": "Back_Driveway",
@@ -59,7 +66,29 @@ def monitor(request):
             LIMIT 1
         """)
         raw_message = cursor.fetchone()
-        facility_state, camera_states = parse_facility_state(raw_message[0]) if raw_message else (None, {})
+        if raw_message:
+            facility_state, camera_states = parse_facility_state(raw_message[0])
+            timestamp = raw_message[1]
+            if timezone.is_naive(timestamp):
+                timestamp = timezone.make_aware(timestamp)
+            
+            # Update camera state windows
+            for camera_id, state in camera_states.items():
+                update_camera_state(camera_id, state, timestamp)
+
+            # Get the most frequent states for each camera
+            most_frequent_states = {camera_id: get_most_frequent_state(camera_id) for camera_id in camera_states.keys()}
+        else:
+            facility_state, most_frequent_states = None, {}
+                
+        
+                # Update camera state windows
+        for camera_id, state in camera_states.items():
+            update_camera_state(camera_id, state, raw_message[1])
+
+        # Get the most frequent states for each camera
+        most_frequent_states = {camera_id: get_most_frequent_state(camera_id) for camera_id in camera_states.keys()}
+
 
         # Fetch the latest frame analyses for each camera
         cursor.execute("""
@@ -90,7 +119,7 @@ def monitor(request):
 
     initial_data = {
         'facility_state': facility_state,
-        'camera_states': camera_states,
+        'camera_states': most_frequent_states, #now using most_frequent_states
         'camera_feeds': [
             {
                 'cameraName': analysis[0],
@@ -115,6 +144,37 @@ def monitor(request):
         'composite_images': composite_images  # Add composite images to the context
     })
     
+def update_camera_state(camera_id, state, timestamp):
+    if camera_id not in camera_state_windows:
+        camera_state_windows[camera_id] = deque(maxlen=900)  # 15 minutes * 60 seconds = 900 seconds
+
+    # Ensure timestamp is timezone-aware
+    if timezone.is_naive(timestamp):
+        timestamp = timezone.make_aware(timestamp)
+
+    # Remove outdated states (older than 15 minutes)
+    current_time = timestamp
+    while camera_state_windows[camera_id] and (current_time - camera_state_windows[camera_id][0][1]) > timedelta(minutes=15):
+        camera_state_windows[camera_id].popleft()
+
+    # Add the new state
+    camera_state_windows[camera_id].append((state, timestamp))
+
+def get_most_frequent_state(camera_id):
+    if camera_id not in camera_state_windows:
+        return "Unknown"
+
+    # Filter states to only include those with key phrases
+    relevant_states = [state for state, _ in camera_state_windows[camera_id] if any(phrase in state.lower() for phrase in state_key_phrases)]
+
+    if not relevant_states:
+        return "Unknown"
+
+    # Count the frequency of each state
+    state_counts = Counter(relevant_states)
+
+    # Return the most common state
+    return state_counts.most_common(1)[0][0]
     
 def get_latest_image(request, camera_index):
      conn = get_db_connection()
@@ -186,7 +246,19 @@ def test_websocket(request):
 def parse_facility_state(raw_message):
     try:
         outer_data = json.loads(raw_message)
-        return outer_data.get('facility_state', '').strip(), outer_data.get('camera_states', {})
+        facility_state = outer_data.get('facility_state', '').strip()
+        camera_states = outer_data.get('camera_states', {})
+        
+        # Update camera state windows
+        current_time = timezone.now()
+        for camera_id, state in camera_states.items():
+            update_camera_state(camera_id, state, current_time)
+
+        # Get the most frequent states for each camera
+        most_frequent_states = {camera_id: get_most_frequent_state(camera_id) for camera_id in camera_states.keys()}
+
+        return facility_state, most_frequent_states
+    
     except json.JSONDecodeError as e:
         logger.error(f"Error parsing JSON: {str(e)}")
     except Exception as e:
@@ -331,15 +403,21 @@ def update_state(request):
             return JsonResponse({"status": "error", "message": "Database connection failed"}, status=500)
         
         try:
+            current_time = timezone.now()
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO facility_status (raw_message, timestamp)
                     VALUES (%s, %s)
-                """, (raw_message, timezone.now()))
+                """, (raw_message, current_time))
             conn.commit()
             
-            # Trigger notification after updating the state
-            notify(request, raw_message)
+            
+            # Parse the state and update camera state windows
+            facility_state, camera_states = parse_facility_state(raw_message)
+            
+                       # Check if any camera state is 'busy'
+            if any('busy' in state.lower() for state in camera_states.values()):
+                notify(request, raw_message)
             
             return JsonResponse({"status": "success", "message": "State updated and notification sent"})
         except psycopg2.Error as e:

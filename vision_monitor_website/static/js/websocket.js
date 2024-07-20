@@ -271,6 +271,7 @@ function updateFacilityState(state) {
 
 // Refresh images every 30 seconds
 setInterval(refreshImages, 30000);
+
 document.addEventListener('DOMContentLoaded', function () {
     initializePage();
     setupModalListeners();
