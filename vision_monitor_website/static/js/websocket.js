@@ -73,14 +73,17 @@ function updateCameraStates(cameraStates) {
 }
 
 function updateCameraFeeds(cameraStates) {
-    cameraFeeds.innerHTML = '';
     [...cameraMap.values()].forEach(camera => {
-        const cameraElement = document.createElement('div');
-        cameraElement.className = 'camera-feed';
-        cameraElement.id = `camera-${camera.cameraIndex}`;
+        let cameraElement = document.getElementById(`camera-${camera.cameraIndex}`);
+        if (!cameraElement) {
+            cameraElement = document.createElement('div');
+            cameraElement.className = 'camera-feed';
+            cameraElement.id = `camera-${camera.cameraIndex}`;
+            cameraFeeds.appendChild(cameraElement);
+        }
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
         cameraElement.innerHTML = `
-            <h3>${camera.cameraName} (Camera ${camera.cameraIndex})</h3>
+            <h3>${camera.cameraIndex} (Camera ${camera.cameraIndex})</h3>
             <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
             <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
             <div class="camera-info">Description:</div>
@@ -92,10 +95,10 @@ function updateCameraFeeds(cameraStates) {
             cameraStateElement.textContent = cameraStates[camera.cameraName];
             colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
         }
-        cameraFeeds.appendChild(cameraElement);
     });
     setupModalListeners();
 }
+
 function setupModalListeners() {
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
@@ -134,7 +137,6 @@ function updateSingleCamera(camera) {
         descriptionElement.textContent = camera.description;
     }
 }
-
 function addLLMMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.className = 'message';
@@ -210,7 +212,6 @@ socket.onmessage = function(e) {
 
 function handleUnstructuredMessage(message) {
     console.log("Handling unstructured message:", message);
-    // Assuming the message format is "cameraName cameraIndex timestamp description"
     const parts = message.split(' ');
     if (parts.length >= 4) {
         const cameraName = parts[0];
@@ -225,16 +226,13 @@ function handleUnstructuredMessage(message) {
         }
         updateLLMOutput();
 
-        // Update camera map
-        cameraMap.set(cameraIndex, { cameraName, cameraIndex, timestamp, description });
-        if (cameraMap.size > maxCameras) {
-            const oldestKey = cameraMap.keys().next().value;
-            cameraMap.delete(oldestKey);
-        }
-        updateCameraFeeds();
+        // Update camera map and single camera
+        const camera = { cameraName, cameraIndex, timestamp, description };
+        cameraMap.set(cameraIndex, camera);
+        updateSingleCamera(camera);
 
         // Apply typing effect to the latest LLM message
-        const latestMessage = llmOutput.lastElementChild;
+        const latestMessage = llmOutput.firstElementChild;
         if (latestMessage) {
             const descriptionElement = latestMessage.querySelector('.description');
             descriptionElement.innerHTML = '';
