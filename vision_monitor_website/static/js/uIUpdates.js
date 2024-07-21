@@ -14,7 +14,7 @@ export function updateCameraStates(cameraStates) {
         const thumbnailUrl = getCompositeImageUrl(cameraId.split(' ')[0]);
         stateDiv.innerHTML = `
             <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid" 
-                data-bs-toggle="modal" data-bs-target="#imageModal" 
+                data-bs-toggle="modal" data-bs-target="#compositeImageModal" 
                 data-camera-name="${cameraId.split(' ')[0]}">
             <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
             <div>(Camera ${cameraIndex})</div>
@@ -39,7 +39,9 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         cameraElement.innerHTML = `
             <h3>${camera.cameraIndex} (Camera ${camera.cameraIndex})</h3>
             <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
-            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" 
+                data-bs-toggle="modal" data-bs-target="#plainImageModal" 
+                data-camera-index="${camera.cameraIndex}">
             <div class="camera-info">Description:</div>
             <div class="description">${camera.description}</div>
             <div class="camera-state"></div>
@@ -52,6 +54,7 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
     });
     setupModalListeners();
 }
+
 
 export function updateLLMOutput(llmMessages) {
     llmOutput.innerHTML = '';
@@ -87,13 +90,23 @@ export function updateFacilityState(state, timestamp) {
     colorCodeState(facilityState, state.trim());
 }
 
-function setupModalListeners() {
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImage');
 
-    modal.addEventListener('show.bs.modal', function (event) {
+function setupModalListeners() {
+    const compositeModal = document.getElementById('compositeImageModal');
+    const compositeModalImage = document.getElementById('compositeModalImage');
+
+    compositeModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         const cameraName = button.getAttribute('data-camera-name');
-        modalImage.src = getCompositeImageUrl(cameraName);
+        compositeModalImage.src = getCompositeImageUrl(cameraName);
+    });
+
+    const plainModal = document.getElementById('plainImageModal');
+    const plainModalImage = document.getElementById('plainModalImage');
+
+    plainModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const cameraIndex = button.getAttribute('data-camera-index');
+        plainModalImage.src = getLatestImageUrl(cameraIndex);
     });
 }
