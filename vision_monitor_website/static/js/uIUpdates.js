@@ -45,7 +45,7 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         feedDiv.className = 'camera-feed';
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
         const truncatedDescription = camera.description.length > 50 
-            ? camera.description.substring(0, 50) + '...' 
+            ? camera.description.substring(0, 150) + '...' 
             : camera.description;
         
         feedDiv.innerHTML = `
@@ -64,7 +64,7 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         cameraFeeds.appendChild(feedDiv);
     });
     
-    setupModalListeners();
+    setupModalListeners(cameraMap);
 }
 
 export function updateLLMOutput(llmMessages) {
@@ -108,7 +108,7 @@ export function updateFacilityState(state, timestamp) {
     }
 }
 
-function setupModalListeners() {
+function setupModalListeners(cameraMap) {
     const compositeImageModal = document.getElementById('compositeImageModal');
     const compositeModalImage = document.getElementById('compositeModalImage');
     const imageModal = document.getElementById('imageModal');
