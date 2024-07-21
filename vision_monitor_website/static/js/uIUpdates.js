@@ -1,4 +1,5 @@
 import { getLatestImageUrl, getCompositeImageUrl, colorCodeState } from './utils.js';
+
 const cameraFeeds = document.getElementById('camera-feeds');
 const llmOutput = document.getElementById('llm-output');
 const facilityState = document.getElementById('facility-state');
@@ -6,6 +7,10 @@ const overall = document.getElementById('overall');
 
 export function updateCameraStates(cameraStates) {
     const cameraStatesDiv = document.getElementById('camera-states');
+    if (!cameraStatesDiv) {
+        console.error('Camera states container not found');
+        return;
+    }
     cameraStatesDiv.innerHTML = '';
     for (const [cameraId, state] of Object.entries(cameraStates)) {
         const stateDiv = document.createElement('div');
@@ -13,50 +18,53 @@ export function updateCameraStates(cameraStates) {
         const cameraIndex = cameraId.split(' ').slice(-1)[0];
         const thumbnailUrl = getCompositeImageUrl(cameraId.split(' ')[0]);
         stateDiv.innerHTML = `
-            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid" 
-                data-bs-toggle="modal" data-bs-target="#compositeImageModal" 
-                data-camera-name="${cameraId.split(' ')[0]}">
+            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
             <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
             <div>(Camera ${cameraIndex})</div>
-            <div>${state}</div>
+            <div class="state-text">${state}</div>
         `;
         colorCodeState(stateDiv, state);
         cameraStatesDiv.appendChild(stateDiv);
     }
-    setupModalListeners();
 }
 
 export function updateCameraFeeds(cameraStates, cameraMap) {
-    [...cameraMap.values()].forEach(camera => {
-        let cameraElement = document.getElementById(`camera-${camera.cameraIndex}`);
-        if (!cameraElement) {
-            cameraElement = document.createElement('div');
-            cameraElement.className = 'camera-feed';
-            cameraElement.id = `camera-${camera.cameraIndex}`;
-            cameraFeeds.appendChild(cameraElement);
-        }
+    if (!cameraFeeds) {
+        console.error('Camera feeds container not found');
+        return;
+    }
+    
+    cameraFeeds.innerHTML = '';
+    
+    [...cameraMap.values()].forEach((camera) => {
+        const feedDiv = document.createElement('div');
+        feedDiv.className = 'camera-feed';
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
-        cameraElement.innerHTML = `
-            <h3>${camera.cameraIndex} (Camera ${camera.cameraIndex})</h3>
-            <div class="timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
-            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" 
-                data-bs-toggle="modal" data-bs-target="#plainImageModal" 
-                data-camera-index="${camera.cameraIndex}">
-            <div class="camera-info">Description:</div>
-            <div class="description">${camera.description}</div>
-            <div class="camera-state"></div>
+        const truncatedDescription = camera.description.length > 50 
+            ? camera.description.substring(0, 50) + '...' 
+            : camera.description;
+        
+        feedDiv.innerHTML = `
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
+            <div>${camera.cameraName} (Camera ${camera.cameraIndex})</div>
+            <div class="description" data-bs-toggle="modal" data-bs-target="#textModal" data-camera-index="${camera.cameraIndex}">${truncatedDescription}</div>
         `;
-        const cameraStateElement = cameraElement.querySelector('.camera-state');
+        
         if (cameraStates && cameraStates[camera.cameraName]) {
-            cameraStateElement.textContent = cameraStates[camera.cameraName];
-            colorCodeState(cameraStateElement, cameraStates[camera.cameraName]);
+            colorCodeState(feedDiv, cameraStates[camera.cameraName]);
         }
+        
+        cameraFeeds.appendChild(feedDiv);
     });
+    
     setupModalListeners();
 }
 
-
 export function updateLLMOutput(llmMessages) {
+    if (!llmOutput) {
+        console.error('LLM output container not found');
+        return;
+    }
     llmOutput.innerHTML = '';
     llmMessages.forEach(message => {
         const messageElement = document.createElement('div');
@@ -84,41 +92,47 @@ export function updateSingleCamera(camera) {
     }
 }
 
+
 export function updateFacilityState(state, timestamp) {
-    overall.innerHTML = `<div class="overall">Overall Facility State: ${timestamp || new Date().toLocaleString()}</div>`;
-    facilityState.textContent = state.trim();
-    colorCodeState(facilityState, state.trim());
+    if (overall) overall.innerHTML = `<div class="overall">Overall Facility State: ${timestamp || new Date().toLocaleString()}</div>`;
+    if (facilityState) {
+        facilityState.textContent = state.trim();
+        colorCodeState(facilityState, state.trim());
+    }
 }
 
-
 function setupModalListeners() {
-    const compositeModal = document.getElementById('compositeImageModal');
-    const compositeModalImage = document.getElementById('compositeModalImage');
+    const imageModal = document.getElementById('imageModal');
+    const textModal = document.getElementById('textModal');
+    const fullImage = document.getElementById('fullImage');
+    const fullText = document.getElementById('fullText');
 
-    compositeModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const cameraName = button.getAttribute('data-camera-name');
-        compositeModalImage.src = getCompositeImageUrl(cameraName);
-    });
+    if (imageModal && textModal && fullImage && fullText) {
+        imageModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const cameraIndex = button.getAttribute('data-camera-index');
+            fullImage.src = getLatestImageUrl(cameraIndex);
+        });
 
-    const plainModal = document.getElementById('plainImageModal');
-    const plainModalImage = document.getElementById('plainModalImage');
-
-    plainModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const cameraIndex = button.getAttribute('data-camera-index');
-        plainModalImage.src = getLatestImageUrl(cameraIndex);
-    });
+        textModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const cameraIndex = button.getAttribute('data-camera-index');
+            const camera = [...cameraMap.values()].find(c => c.cameraIndex == cameraIndex);
+            if (camera) {
+                fullText.textContent = camera.description;
+            }
+        });
+    }
 }
 
 export function updateAlertStatus(cameraId, status) {
-    const cameraElement = document.getElementById(`camera-${cameraId}`);
+    const cameraElement = document.querySelector(`.camera-feed[data-camera-index="${cameraId}"]`);
     if (cameraElement) {
-        const alertStatusElement = cameraElement.querySelector('.alert-status');
+        let alertStatusElement = cameraElement.querySelector('.alert-status');
         if (!alertStatusElement) {
-            const newAlertStatusElement = document.createElement('div');
-            newAlertStatusElement.className = 'alert-status';
-            cameraElement.appendChild(newAlertStatusElement);
+            alertStatusElement = document.createElement('div');
+            alertStatusElement.className = 'alert-status';
+            cameraElement.appendChild(alertStatusElement);
         }
         alertStatusElement.textContent = status;
         colorCodeAlertStatus(alertStatusElement, status);

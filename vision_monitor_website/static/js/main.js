@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error('Error parsing initial data:', error);
         }
+    } else {
+        console.warn('Initial data element not found');
     }
 
     initializePage(initialData);

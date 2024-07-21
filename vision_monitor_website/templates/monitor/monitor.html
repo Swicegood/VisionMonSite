@@ -16,57 +16,41 @@
         <div id="overall" class="mb-2"></div>
         <div id="facility-state" class="mb-4"></div>
 
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h2 class="mb-0">Camera States</h2>
-                    </div>
-                    <div id="camera-states" class="card-body camera-grid"></div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h2 class="mb-0">Camera Feeds</h2>
-                    </div>
-                    <div id="camera-feeds" class="card-body camera-grid"></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h2 class="mb-0">LLM Output</h2>
-                    </div>
-                    <div id="llm-output" class="card-body"></div>
+        <div id="camera-states" class="mb-4">
+            <!-- Camera states will be dynamically inserted here -->
+        </div>
+
+        <div id="camera-feeds" class="camera-grid">
+            <!-- Camera feeds will be dynamically inserted here -->
+        </div>
+
+        <div id="llm-output" class="mt-4">
+            <h2>LLM Output</h2>
+            <!-- LLM output will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Modal for full images -->
+    <div id="imageModal" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <img id="fullImage" class="img-fluid" alt="Full Camera Image">
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="compositeImageModal" class="modal fade" tabindex="-1" aria-labelledby="compositeImageModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <!-- Modal for full text -->
+    <div id="textModal" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="compositeImageModalLabel">Composite Camera Image</h5>
+                    <h5 class="modal-title">Camera Description</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <img id="compositeModalImage" class="img-fluid" src="" alt="Composite Camera Image">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="plainImageModal" class="modal fade" tabindex="-1" aria-labelledby="plainImageModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="plainImageModalLabel">Camera Image</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <img id="plainModalImage" class="img-fluid" src="" alt="Camera Image">
+                    <p id="fullText"></p>
                 </div>
             </div>
         </div>

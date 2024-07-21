@@ -15,15 +15,19 @@ export function initializePage(initialData) {
         if (initialData.camera_states) {
             updateCameraStates(initialData.camera_states);
         }
-        if (initialData.camera_feeds) {
+        if (initialData.camera_feeds && Array.isArray(initialData.camera_feeds)) {
             initialData.camera_feeds.forEach(feed => {
-                cameraMap.set(feed.cameraIndex, feed);
+                if (feed && feed.cameraIndex) {
+                    cameraMap.set(feed.cameraIndex, feed);
+                }
             });
             updateCameraFeeds(initialData.camera_states, cameraMap);
         }
-        if (initialData.llm_outputs) {
+        if (initialData.llm_outputs && Array.isArray(initialData.llm_outputs)) {
             initialData.llm_outputs.forEach(output => {
-                llmMessages.push(output);
+                if (output) {
+                    llmMessages.push(output);
+                }
             });
             updateLLMOutput(llmMessages);
         }
@@ -41,8 +45,10 @@ export function addLLMMessage(message) {
 }
 
 export function updateCamera(camera) {
-    cameraMap.set(camera.cameraIndex, camera);
-    updateSingleCamera(camera);
+    if (camera && camera.cameraIndex) {
+        cameraMap.set(camera.cameraIndex, camera);
+        updateSingleCamera(camera);
+    }
 }
 
 export { cameraMap, llmMessages };

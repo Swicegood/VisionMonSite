@@ -7,82 +7,6 @@ body {
     padding: 20px;
 }
 
-.card {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    height: calc(100vh - 100px);
-}
-
-.card-header {
-    background-color: #007bff;
-    color: white;
-    border-radius: 15px 15px 0 0;
-}
-
-#camera-feeds,
-#llm-output,
-#camera-states {
-    height: calc(100% - 60px);
-    overflow-y: auto;
-    padding: 15px;
-    background-color: #f1f3f5;
-}
-
-.camera-feed,
-.message,
-.camera-state {
-    background-color: white;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.timestamp {
-    font-size: 0.8em;
-    color: #6c757d;
-}
-
-.overall {
-    font-size: 1.5em;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.camera-info {
-    font-weight: bold;
-    color: #007bff;
-}
-
-.description {
-    margin-top: 5px;
-}
-
-.camera-feed img,
-.camera-state img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    cursor: pointer;
-}
-
-.typing {
-    display: inline-block;
-    width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    animation: typing 2s steps(40, end);
-    animation-fill-mode: forwards;
-}
-
-@keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
-}
-
 #facility-state {
     padding: 10px;
     margin-bottom: 20px;
@@ -91,24 +15,54 @@ body {
     text-align: center;
 }
 
-.camera-grid {
+#camera-states, .camera-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-.modal-dialog {
-    max-width: 90%;
-    margin: 1.75rem auto;
+.camera-state, .camera-feed {
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.8em;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.modal-content {
-    background-color: transparent;
-    border: none;
+.camera-state img, .camera-feed img {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    cursor: pointer;
 }
 
-.modal-body {
-    padding: 0;
+.camera-feed .description {
+    margin-top: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#llm-output {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.message {
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timestamp {
+    font-size: 0.8em;
+    color: #6c757d;
 }
 
 .modal-body img {
@@ -116,46 +70,11 @@ body {
     height: auto;
 }
 
-.alert-status {
-    margin-top: 10px;
-    padding: 5px;
-    border-radius: 5px;
-    font-weight: bold;
-    text-align: center;
-}
-
-/* Alert status colors */
-.bg-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.bg-success {
-    background-color: #28a745;
-    color: white;
-}
-
-.bg-warning {
-    background-color: #ffc107;
-    color: black;
-}
-
-.bg-info {
-    background-color: #17a2b8;
-    color: white;
-}
-
-.bg-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.bg-primary {
-    background-color: #007bff;
-    color: white;
-}
-
-.bg-light {
-    background-color: #f8f9fa;
-    color: #212529;
-}
+/* Color coding classes */
+.bg-danger { background-color: #dc3545; color: white; }
+.bg-success { background-color: #28a745; color: white; }
+.bg-warning { background-color: #ffc107; color: black; }
+.bg-info { background-color: #17a2b8; color: white; }
+.bg-secondary { background-color: #6c757d; color: white; }
+.bg-primary { background-color: #007bff; color: white; }
+.bg-light { background-color: #f8f9fa; color: #212529; }
