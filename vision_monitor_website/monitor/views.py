@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+import json
 
 from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analyses, fetch_recent_llm_outputs, insert_facility_status
 from .state_management import parse_facility_state
@@ -20,7 +21,7 @@ def home(request):
 def monitor(request):
     raw_message = fetch_latest_facility_state()
     if raw_message:
-        facility_state, camera_states = parse_facility_state(raw_message[0])
+        facility_state, camera_states, alerts = parse_facility_state(raw_message[0])
         timestamp = raw_message[1]
     else:
         facility_state, camera_states = None, {}
@@ -84,12 +85,19 @@ def update_state(request):
         current_time = timezone.now()
         
         if insert_facility_status(raw_message, current_time):
-            facility_state, camera_states = parse_facility_state(raw_message)
+            facility_state, camera_states, alerts = parse_facility_state(raw_message)
             
-            if any('busy' in state.lower() for state in camera_states.values()):
-                notify(request, raw_message)
+            # Handle alerts
+            for camera_id, alert_type in alerts:
+                if alert_type == "ALERT":
+                    notify(request, raw_message, camera_id)
+                send_websocket_update(json.dumps({
+                    "type": "alert",
+                    "camera_id": camera_id,
+                    "alert_type": alert_type
+                }))
             
-            return JsonResponse({"status": "success", "message": "State updated and notification sent"})
+            return JsonResponse({"status": "success", "message": "State updated and alerts processed"})
         else:
             return JsonResponse({"status": "error", "message": "Failed to update state"}, status=500)
     except Exception as e:

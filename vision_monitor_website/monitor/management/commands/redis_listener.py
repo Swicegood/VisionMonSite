@@ -119,7 +119,7 @@ class Command(BaseCommand):
             request.META['SERVER_PORT'] = '8000'  # Adjust if your port is different
 
             # Import here to avoid circular import
-            from monitor.views import notify
+            from monitor.notifications import notify
 
             # Call the notify function with raw message
             notify(request, raw_message)

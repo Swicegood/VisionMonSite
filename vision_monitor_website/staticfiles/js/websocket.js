@@ -1,4 +1,4 @@
-import { handleStructuredMessage, handleUnstructuredMessage } from './messageHandlers.js';
+import { handleStructuredMessage, handleUnstructuredMessage, handleAlertMessage } from './messageHandlers.js';
 
 let socket;
 
@@ -9,15 +9,14 @@ export function initializeWebSocket() {
         const data = JSON.parse(e.data);
         if (data.message) {
             try {
-                const intermediateData = JSON.parse(data.message);
-                console.log("Parsed intermediate message data:", intermediateData);
-
-                if (intermediateData.message) {
-                    const innerData = JSON.parse(intermediateData.message);
-                    console.log("Parsed inner message data (facility_state and camera_states):", innerData);
+                const parsedData = JSON.parse(data.message);
+                if (parsedData.type === "alert") {
+                    handleAlertMessage(parsedData);
+                } else if (parsedData.message) {
+                    const innerData = JSON.parse(parsedData.message);
                     handleStructuredMessage(innerData);
                 } else {
-                    handleUnstructuredMessage(intermediateData);
+                    handleUnstructuredMessage(parsedData);
                 }
             } catch (error) {
                 console.error("Error parsing JSON:", error);

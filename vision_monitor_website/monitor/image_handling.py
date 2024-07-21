@@ -23,7 +23,6 @@ def get_latest_image(request, camera_index):
                 LIMIT 1
             """, [camera_index])
             result = cursor.fetchone()
-            
             if result:
                 image_data, timestamp = result
                 response = HttpResponse(image_data, content_type='image/jpeg')

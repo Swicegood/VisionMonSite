@@ -38,3 +38,26 @@ export function handleUnstructuredMessage(message) {
         console.error("Received message in unexpected format:", message);
     }
 }
+
+export function handleAlertMessage(data) {
+    console.log("Handling alert message:", data);
+    const { camera_id, alert_type } = data;
+    
+    switch (alert_type) {
+        case "ALERT":
+            updateAlertStatus(camera_id, "Alert triggered");
+            // You might want to play a sound or show a notification here
+            break;
+        case "RESOLVED":
+            updateAlertStatus(camera_id, "Alert resolved");
+            break;
+        case "FLAPPING_START":
+            updateAlertStatus(camera_id, "Alert flapping");
+            break;
+        case "FLAPPING_END":
+            updateAlertStatus(camera_id, "Flapping ended");
+            break;
+        default:
+            console.warn("Unknown alert type:", alert_type);
+    }
+}

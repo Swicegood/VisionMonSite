@@ -110,3 +110,34 @@ function setupModalListeners() {
         plainModalImage.src = getLatestImageUrl(cameraIndex);
     });
 }
+
+export function updateAlertStatus(cameraId, status) {
+    const cameraElement = document.getElementById(`camera-${cameraId}`);
+    if (cameraElement) {
+        const alertStatusElement = cameraElement.querySelector('.alert-status');
+        if (!alertStatusElement) {
+            const newAlertStatusElement = document.createElement('div');
+            newAlertStatusElement.className = 'alert-status';
+            cameraElement.appendChild(newAlertStatusElement);
+        }
+        alertStatusElement.textContent = status;
+        colorCodeAlertStatus(alertStatusElement, status);
+    }
+}
+
+function colorCodeAlertStatus(element, status) {
+    element.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+    switch (status) {
+        case "Alert triggered":
+            element.classList.add('bg-danger');
+            break;
+        case "Alert resolved":
+            element.classList.add('bg-success');
+            break;
+        case "Alert flapping":
+            element.classList.add('bg-warning');
+            break;
+        default:
+            element.classList.add('bg-secondary');
+    }
+}

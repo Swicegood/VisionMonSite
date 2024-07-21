@@ -3,8 +3,11 @@ import logging
 from collections import deque, Counter
 from datetime import timedelta
 from django.utils import timezone
+from .alert_logic import AlertManager
 
 logger = logging.getLogger(__name__)
+
+alert_manager = AlertManager()
 
 camera_state_windows = {}
 state_key_phrases = ["busy", "festival happening", "crowd gathering", "night-time", "quiet", "person present", "people eating"]
@@ -16,17 +19,22 @@ def parse_facility_state(raw_message):
         camera_states = outer_data.get('camera_states', {})
         
         current_time = timezone.now()
+        alerts = []
         for camera_id, state in camera_states.items():
             update_camera_state(camera_id, state, current_time)
+            is_alerting = any(phrase in state.lower() for phrase in ["busy", "festival happening", "crowd gathering"])
+            alert_result = alert_manager.update_state(camera_id, is_alerting)
+            if alert_result:
+                alerts.append((camera_id, alert_result))
 
         most_frequent_states = {camera_id: get_most_frequent_state(camera_id) for camera_id in camera_states.keys()}
 
-        return facility_state, most_frequent_states
+        return facility_state, most_frequent_states, alerts
     except json.JSONDecodeError as e:
         logger.error(f"Error parsing JSON: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error while parsing facility state: {str(e)}")
-    return None, {}
+    return None, {}, []
 
 def update_camera_state(camera_id, state, timestamp):
     if camera_id not in camera_state_windows:

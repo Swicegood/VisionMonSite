@@ -5,12 +5,12 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .discord_client import send_discord
 from .image_handling import get_latest_image
-from .state_management import parse_facility_state
+from .state_management import parse_facility_state, alert_manager
 from .db_operations import fetch_latest_facility_state
 
 logger = logging.getLogger(__name__)
 
-def notify(request, raw_message=None):
+def notify(request, raw_message=None, specific_camera_id=None):
     if raw_message is None:
         raw_message = fetch_latest_facility_state()
         if raw_message is None:
@@ -18,55 +18,60 @@ def notify(request, raw_message=None):
             return
         raw_message = raw_message[0]
     
-    status, camera_states = parse_facility_state(raw_message)
+    facility_state, camera_states, alerts = parse_facility_state(raw_message)
     
-    if status == "busy" and any("busy" in state.lower() for state in camera_states.values()):
-        message = f"Facility status update - Overall: {status}\n\nBusy cameras:"
-        image_paths = []
+    if specific_camera_id:
+        alerts = [alert for alert in alerts if alert[0] == specific_camera_id]
+    
+    for camera_id, alert_type in alerts:
+        if alert_type == "ALERT":
+            message = f"Alert for camera {camera_id} - State: {camera_states.get(camera_id, 'Unknown')}"
+            image_paths = []
 
-        for camera_name, camera_state in camera_states.items():
-            if "busy" in camera_state.lower():
-                camera_index = camera_name.split()[-1]
-                try:
-                    latest_image = get_latest_image(request, camera_index)
-                    if isinstance(latest_image, HttpResponse) and latest_image.status_code == 200:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
-                            temp_image.write(latest_image.content)
-                            image_paths.append((temp_image.name, camera_name))
-                        message += f"\n- {camera_name}: {camera_state}"
-                    else:
-                        logger.error(f"Failed to get image for camera {camera_name}")
-                except Exception as e:
-                    logger.error(f"Error retrieving image for camera {camera_name}: {str(e)}")
-
-        if image_paths:
             try:
-                success = send_discord(image_paths, message, str(timezone.now()))
-                logger.info(f"send_discord called with images. Result: {success}")
+                latest_image = get_latest_image(request, camera_id.split(' ')[1])
+                if isinstance(latest_image, HttpResponse) and latest_image.status_code == 200:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                        temp_image.write(latest_image.content)
+                        image_paths.append((temp_image.name, camera_id))
+                else:
+                    logger.error(f"Failed to get image for camera {camera_id}")
             except Exception as e:
-                logger.error(f"Error in send_discord: {str(e)}")
-                success = False
+                logger.error(f"Error retrieving image for camera {camera_id}: {str(e)}")
 
-            for path, _ in image_paths:
-                os.unlink(path)
-                logger.info(f"Temporary image file deleted: {path}")
+            if image_paths:
+                try:
+                    success = send_discord(image_paths, message, str(timezone.now()))
+                    logger.info(f"send_discord called for camera {camera_id}. Result: {success}")
+                except Exception as e:
+                    logger.error(f"Error in send_discord for camera {camera_id}: {str(e)}")
+                    success = False
 
-            if success:
-                logger.info("Notification sent successfully")
+                for path, _ in image_paths:
+                    os.unlink(path)
+                    logger.info(f"Temporary image file deleted: {path}")
+
+                if success:
+                    logger.info(f"Notification sent successfully for camera {camera_id}")
+                else:
+                    logger.error(f"Failed to send notification for camera {camera_id}")
             else:
-                logger.error("Failed to send notification")
-        else:
-            logger.warning("No busy cameras found with valid images")
-    else:
-        logger.info(f"Current facility status is: {status}. No notification sent.")
+                logger.warning(f"No valid image found for camera {camera_id}")
+        
+        # Log other alert types
+        elif alert_type in ["RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
+            logger.info(f"Alert status for camera {camera_id}: {alert_type}")
 
 def test_notification(request):
     try:
         message = "TEST NOTIFICATION: This is a test message with the latest image."
         current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # For testing, we'll use camera index 1
+        camera_id = 1
+        
         try:
-            latest_image = get_latest_image(request, 1)
+            latest_image = get_latest_image(request, camera_id.split(' ')[1])
             logger.info("Latest image retrieved successfully")
         except Exception as e:
             logger.error(f"Error retrieving latest image: {str(e)}")
@@ -80,7 +85,7 @@ def test_notification(request):
             logger.info(f"Temporary image file created at: {temp_image_path}")
             
             try:
-                success = send_discord(temp_image_path, message, current_time)
+                success = send_discord([(temp_image_path, f"Camera {camera_id}")], message, current_time)
                 logger.info(f"send_discord called with image. Result: {success}")
             except Exception as e:
                 logger.error(f"Error in send_discord: {str(e)}")
