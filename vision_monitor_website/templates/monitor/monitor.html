@@ -30,9 +30,19 @@
         </div>
     </div>
 
+    <div id="compositeImageModal" class="modal fade" tabindex="-1" aria-labelledby="compositeImageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <img id="compositeModalImage" class="img-fluid" src="" alt="Composite Camera Image">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for full images -->
     <div id="imageModal" class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-body">
                     <img id="fullImage" class="img-fluid" alt="Full Camera Image">
@@ -43,12 +53,8 @@
 
     <!-- Modal for full text -->
     <div id="textModal" class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Camera Description</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
                 <div class="modal-body">
                     <p id="fullText"></p>
                 </div>

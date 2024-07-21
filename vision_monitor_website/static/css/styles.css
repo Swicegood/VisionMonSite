@@ -70,6 +70,25 @@ body {
     height: auto;
 }
 
+.modal-dialog {
+    max-width: 90%;
+    margin: 1.75rem auto;
+}
+
+.modal-content {
+    background-color: transparent;
+    border: none;
+}
+
+.modal-body {
+    padding: 0;
+}
+
+.modal-body img {
+    width: 100%;
+    height: auto;
+}
+
 /* Color coding classes */
 .bg-danger { background-color: #dc3545; color: white; }
 .bg-success { background-color: #28a745; color: white; }

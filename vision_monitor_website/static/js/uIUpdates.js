@@ -16,16 +16,20 @@ export function updateCameraStates(cameraStates) {
         const stateDiv = document.createElement('div');
         stateDiv.className = 'camera-state';
         const cameraIndex = cameraId.split(' ').slice(-1)[0];
-        const thumbnailUrl = getCompositeImageUrl(cameraId.split(' ')[0]);
+        const cameraName = cameraId.split(' ')[0];
+        const thumbnailUrl = getCompositeImageUrl(cameraName);
         stateDiv.innerHTML = `
-            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid">
-            <div>${cameraId.split(' ')[0].replace('_', ' ')}</div>
+            <img src="${thumbnailUrl}" alt="Camera ${cameraIndex}" class="img-fluid"
+                data-bs-toggle="modal" data-bs-target="#compositeImageModal" 
+                data-camera-name="${cameraName}">
+            <div>${cameraName.replace('_', ' ')}</div>
             <div>(Camera ${cameraIndex})</div>
             <div class="state-text">${state}</div>
         `;
         colorCodeState(stateDiv, state);
         cameraStatesDiv.appendChild(stateDiv);
     }
+    setupModalListeners();
 }
 
 export function updateCameraFeeds(cameraStates, cameraMap) {
@@ -45,9 +49,12 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
             : camera.description;
         
         feedDiv.innerHTML = `
-            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" data-bs-toggle="modal" data-bs-target="#imageModal" data-camera-index="${camera.cameraIndex}">
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" 
+                data-bs-toggle="modal" data-bs-target="#imageModal" 
+                data-camera-index="${camera.cameraIndex}">
             <div>${camera.cameraName} (Camera ${camera.cameraIndex})</div>
-            <div class="description" data-bs-toggle="modal" data-bs-target="#textModal" data-camera-index="${camera.cameraIndex}">${truncatedDescription}</div>
+            <div class="description" data-bs-toggle="modal" data-bs-target="#textModal" 
+                data-camera-index="${camera.cameraIndex}">${truncatedDescription}</div>
         `;
         
         if (cameraStates && cameraStates[camera.cameraName]) {
@@ -102,18 +109,30 @@ export function updateFacilityState(state, timestamp) {
 }
 
 function setupModalListeners() {
+    const compositeImageModal = document.getElementById('compositeImageModal');
+    const compositeModalImage = document.getElementById('compositeModalImage');
     const imageModal = document.getElementById('imageModal');
-    const textModal = document.getElementById('textModal');
     const fullImage = document.getElementById('fullImage');
+    const textModal = document.getElementById('textModal');
     const fullText = document.getElementById('fullText');
 
-    if (imageModal && textModal && fullImage && fullText) {
+    if (compositeImageModal && compositeModalImage) {
+        compositeImageModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const cameraName = button.getAttribute('data-camera-name');
+            compositeModalImage.src = getCompositeImageUrl(cameraName);
+        });
+    }
+
+    if (imageModal && fullImage) {
         imageModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const cameraIndex = button.getAttribute('data-camera-index');
             fullImage.src = getLatestImageUrl(cameraIndex);
         });
+    }
 
+    if (textModal && fullText) {
         textModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const cameraIndex = button.getAttribute('data-camera-index');
