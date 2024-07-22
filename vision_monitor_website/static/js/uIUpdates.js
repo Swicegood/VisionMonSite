@@ -83,7 +83,7 @@ export function updateLLMOutput(llmMessages) {
         `;
         llmOutput.appendChild(messageElement);
     });
-    llmOutput.scrollTop = llmOutput.scrollHeight;
+    llmOutput.scrollTop = 0;
 }
 
 export function updateSingleCamera(camera) {
