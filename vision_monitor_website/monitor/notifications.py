@@ -23,9 +23,9 @@ def notify(request, raw_message=None, specific_camera_id=None):
     if specific_camera_id:
         alerts = [alert for alert in alerts if alert[0] == specific_camera_id]
     
-    for camera_id, alert_type in alerts:
-        if alert_type == "ALERT":
-            message = f"Alert for camera {camera_id} - State: {camera_states.get(camera_id, 'Unknown')}"
+    for camera_id, alert_type, state in alerts:
+        if alert_type in ["ALERT", "RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
+            message = f"Alert for camera {camera_id} {alert_type} - State: {state}"
             image_paths = []
 
             try:
@@ -57,11 +57,14 @@ def notify(request, raw_message=None, specific_camera_id=None):
                     logger.error(f"Failed to send notification for camera {camera_id}")
             else:
                 logger.warning(f"No valid image found for camera {camera_id}")
+        else:
+            logger.info(f"No notification required for camera {camera_id} ({alert_type})")
+            
+    if alerts:
+        logger.info("Alerts processed successfully")
+    else:
+        logger.info("No alerts to process")
         
-        # Log other alert types
-        elif alert_type in ["RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
-            logger.info(f"Alert status for camera {camera_id}: {alert_type}")
-
 def test_notification(request):
     try:
         message = "TEST NOTIFICATION: This is a test message with the latest image."

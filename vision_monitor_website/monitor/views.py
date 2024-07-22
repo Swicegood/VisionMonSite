@@ -88,7 +88,7 @@ def update_state(request):
             facility_state, camera_states, alerts = parse_facility_state(raw_message)
             
             # Handle alerts
-            for camera_id, alert_type in alerts:
+            for camera_id, alert_type, state in alerts:
                 if alert_type == "ALERT":
                     notify(request, raw_message, camera_id)
                 send_websocket_update(json.dumps({
