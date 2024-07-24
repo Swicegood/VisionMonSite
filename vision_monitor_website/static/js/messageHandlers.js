@@ -14,7 +14,6 @@ export function handleStructuredMessage(innerData) {
 }
 
 export function handleUnstructuredMessage(message) {
-    console.log("Handling unstructured message:", message);
     const parts = message.split(' ');
     if (parts.length >= 4) {
         const cameraName = parts[0];

@@ -36,19 +36,21 @@ def monitor(request):
         'camera_states': camera_states,
         'camera_feeds': [
             {
-                'cameraName': analysis[0],
+                'cameraId': analysis[0],
                 'cameraIndex': analysis[1],
                 'timestamp': analysis[2].isoformat(),
                 'description': analysis[3],
+                'cameraName': analysis[4],
                 'compositeImage': composite_images.get(analysis[0], '')
             } for analysis in latest_frame_analyses
         ],
         'llm_outputs': [
             {
-                'cameraName': output[0],
+                'cameraId': output[0],
                 'cameraIndex': output[1],
                 'timestamp': output[2].isoformat(),
-                'description': output[3]
+                'description': output[3],
+                'cameraName': output[4]
             } for output in llm_outputs
         ]
     }

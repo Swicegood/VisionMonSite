@@ -46,7 +46,7 @@ def fetch_latest_frame_analyses():
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT DISTINCT ON (camera_id)
-                    camera_id, camera_index, timestamp, description
+                    camera_id, camera_index, timestamp, description, camera_name
                 FROM visionmon_metadata
                 ORDER BY camera_id, timestamp DESC
             """)
@@ -65,7 +65,7 @@ def fetch_recent_llm_outputs(limit=50):
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT camera_id, camera_index, timestamp, description
+                SELECT camera_id, camera_index, timestamp, description, camera_name
                 FROM visionmon_metadata
                 ORDER BY timestamp DESC
                 LIMIT %s

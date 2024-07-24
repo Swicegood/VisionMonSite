@@ -42,9 +42,8 @@ body {
 .camera-feed .description {
     margin-top: 5px;
     cursor: pointer;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 #llm-output {

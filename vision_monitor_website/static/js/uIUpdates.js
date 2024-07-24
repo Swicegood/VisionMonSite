@@ -44,9 +44,9 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         const feedDiv = document.createElement('div');
         feedDiv.className = 'camera-feed';
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
-        const truncatedDescription = camera.description.length > 50 
-            ? camera.description.substring(0, 150) + '...' 
-            : camera.description;
+        const truncatedDescription = camera.description.length > 150 
+        ? camera.description.substring(0, 150) + '...' 
+        : camera.description;
         
         feedDiv.innerHTML = `
             <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" 
