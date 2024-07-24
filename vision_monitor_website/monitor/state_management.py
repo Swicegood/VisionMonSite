@@ -4,6 +4,7 @@ from collections import deque, Counter
 from datetime import timedelta
 from django.utils import timezone
 from .alert_logic import AlertManager
+from .config import camera_names
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,20 @@ def update_camera_state(camera_id, state, timestamp):
     camera_state_windows[camera_id].append((state, timestamp))
     logger.info(f"Updated state for camera {camera_id}: {state} at {timestamp}")
 
+
+# Define alert state penalties and problematic states for specific cameras
+camera_alert_config = {
+    "Hall 8": {
+        "penalty": 0.6,
+        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+    },
+    "Stage 12": {
+        "penalty": 0.6,
+        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+    },
+    # Add other cameras with their specific penalties and problematic states
+}
+
 def get_most_frequent_state(camera_id):
     if camera_id not in camera_state_windows:
         logger.error(f"Camera {camera_id} not found in state windows")
@@ -74,7 +89,18 @@ def get_most_frequent_state(camera_id):
         logger.warning(f"No relevant states found for camera {camera_id}")
         return camera_state_windows[camera_id][-1][0]  # Return the most recent state if no relevant states
     
-    state_counts = Counter(relevant_states)
+    # Get the alert config for this camera
+    camera_config = camera_alert_config.get(camera_id)
+    
+    # Create a weighted Counter
+    state_counts = Counter()
+    for state in relevant_states:
+        if camera_config and any(alert in state.lower() for alert in camera_config["alert_states"]):
+            # Apply penalty to specific alert states for this camera
+            state_counts[state] += camera_config["penalty"]
+        else:
+            state_counts[state] += 1.0
+    
     most_common_state = state_counts.most_common(1)[0][0]
     logger.info(f"Most frequent state for camera {camera_id}: {most_common_state}")
     return most_common_state

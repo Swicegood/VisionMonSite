@@ -3,6 +3,7 @@ import tempfile
 import os
 import json
 import base64
+import time
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .discord_client import send_discord
@@ -69,53 +70,57 @@ def notify(request, raw_message=None, specific_camera_id=None):
     else:
         logger.info("No alerts to process")
 
-async def process_scheduled_alerts(redis_client):
+def process_scheduled_alerts_sync(redis_client):
     while True:
         try:
             # Wait for alert in the queue
-            _, alert_data = await redis_client.blpop(ALERT_QUEUE)
-            alert = json.loads(alert_data)
+            alert_data = redis_client.blpop(ALERT_QUEUE, timeout=1)
+            if alert_data:
+                _, alert_json = alert_data
+                alert = json.loads(alert_json)
 
-            camera_id = alert['camera_id']
-            check_time = alert['check_time']
-            message = alert['message']
-            frame_data = alert['frame']
+                camera_id = alert['camera_id']
+                check_time = alert['check_time']
+                message = alert['message']
+                frame_data = alert['frame']
 
-            if frame_data:
-                # Decode the base64 image
-                image_data = base64.b64decode(frame_data)
-                
-                # Create a temporary file for the image
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
-                    temp_image.write(image_data)
-                    image_path = temp_image.name
+                if frame_data:
+                    # Decode the base64 image
+                    image_data = base64.b64decode(frame_data)
+                    
+                    # Create a temporary file for the image
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                        temp_image.write(image_data)
+                        image_path = temp_image.name
 
-                # Send the alert with the image
-                try:
-                    success = send_discord([(image_path, camera_id)], message, str(timezone.now()))
-                    if success:
-                        logger.info(f"Scheduled alert sent successfully for camera {camera_id}")
-                    else:
-                        logger.error(f"Failed to send scheduled alert for camera {camera_id}")
-                except Exception as e:
-                    logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
-                
-                # Clean up the temporary file
-                os.unlink(image_path)
-            else:
-                logger.warning(f"No image data available for scheduled alert from camera {camera_id}")
-                # Send the alert without an image
-                try:
-                    success = send_discord([], message, str(timezone.now()))
-                    if success:
-                        logger.info(f"Scheduled alert sent successfully for camera {camera_id} (without image)")
-                    else:
-                        logger.error(f"Failed to send scheduled alert for camera {camera_id} (without image)")
-                except Exception as e:
-                    logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
+                    # Send the alert with the image
+                    try:
+                        success = send_discord([(image_path, camera_id)], message, str(timezone.now()))
+                        if success:
+                            logger.info(f"Scheduled alert sent successfully for camera {camera_id}")
+                        else:
+                            logger.error(f"Failed to send scheduled alert for camera {camera_id}")
+                    except Exception as e:
+                        logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
+                    
+                    # Clean up the temporary file
+                    os.unlink(image_path)
+                else:
+                    logger.warning(f"No image data available for scheduled alert from camera {camera_id}")
+                    # Send the alert without an image
+                    try:
+                        success = send_discord([], message, str(timezone.now()))
+                        if success:
+                            logger.info(f"Scheduled alert sent successfully for camera {camera_id} (without image)")
+                        else:
+                            logger.error(f"Failed to send scheduled alert for camera {camera_id} (without image)")
+                    except Exception as e:
+                        logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
 
         except Exception as e:
             logger.error(f"Error processing scheduled alert: {str(e)}")
+        
+        time.sleep(0.1)  # Small delay to prevent CPU overuse
 
 def test_notification(request):
     try:
@@ -167,7 +172,4 @@ def test_notification(request):
         logger.exception("Unexpected error in test_notification view")
         return JsonResponse({"status": "error", "message": f"Unexpected error: {str(e)}"}, status=500)
 
-# This function can be called to start processing scheduled alerts
-def start_processing_scheduled_alerts():
-    import asyncio
-    asyncio.run(process_scheduled_alerts())
+             

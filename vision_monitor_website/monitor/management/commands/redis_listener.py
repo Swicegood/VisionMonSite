@@ -1,4 +1,4 @@
-import asyncio
+import threading
 import json
 import logging
 from django.core.management.base import BaseCommand
@@ -6,12 +6,12 @@ from channels.layers import get_channel_layer
 import redis
 import os
 from django.conf import settings
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync
 import psycopg2
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpRequest
-from monitor.notifications import process_scheduled_alerts
+from monitor.notifications import process_scheduled_alerts_sync  # Updated import
 
 logger = logging.getLogger(__name__)
 
@@ -38,67 +38,75 @@ class Command(BaseCommand):
         else:
             self.stdout.write('Starting Redis listener and scheduled alerts processor...')
         
-        asyncio.run(self.run_listener_and_processor())
+        self.run_listener_and_processor()
 
-    async def run_listener_and_processor(self):
+    def run_listener_and_processor(self):
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         channel_layer = get_channel_layer()
 
-        # Create tasks for both Redis listening and processing scheduled alerts
-        listener_task = asyncio.create_task(self.listen_to_redis(redis_client, channel_layer))
-        alerts_task = asyncio.create_task(process_scheduled_alerts(redis_client))
+        # Create and start the Redis listener thread
+        listener_thread = threading.Thread(target=self.listen_to_redis_sync, args=(redis_client, channel_layer))
+        listener_thread.start()
 
-        # Wait for both tasks to complete (which they never should)
-        await asyncio.gather(listener_task, alerts_task)
+        # Create and start the scheduled alerts processor thread
+        alerts_thread = threading.Thread(target=self.run_scheduled_alerts_processor, args=(redis_client,))
+        alerts_thread.start()
 
-    async def listen_to_redis(self, redis_client, channel_layer):
+        # Wait for both threads to complete (which they never should)
+        listener_thread.join()
+        alerts_thread.join()
+
+    def listen_to_redis_sync(self, redis_client, channel_layer):
         pubsub = redis_client.pubsub()
         pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
 
         logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
 
         try:
-            while True:
-                try:
-                    message = await sync_to_async(pubsub.get_message)(ignore_subscribe_messages=True, timeout=1.0)
-                    if message:
-                        channel = message['channel'].decode('utf-8')
-                        data = message['data'].decode('utf-8')
-                        logger.info(f"Received message from Redis channel {channel}: {data}")
-
-                        if channel == REDIS_STATE_RESULT_CHANNEL:
-                            # Store raw message in the database
-                            await self.store_state_result(data)
-                            # Trigger notification with raw message
-                            await self.trigger_notification(data)
-
-                        # Forward the message to the WebSocket group
-                        await channel_layer.group_send(
-                            "llm_output",
-                            {
-                                "type": "send_message",
-                                "message": json.dumps({
-                                    "channel": channel,
-                                    "message": data
-                                })
-                            }
-                        )
-                except Exception as e:
-                    logger.error(f"Error processing message: {str(e)}")
+            for message in pubsub.listen():
+                logger.debug(f"Received from pubsub: {message}")
                 
-                await asyncio.sleep(0.1)  # Small delay to prevent CPU overuse
+                if message['type'] == 'message':
+                    channel = message['channel'].decode('utf-8')
+                    data = message['data']
+                    if isinstance(data, bytes):
+                        data = data.decode('utf-8')
+                    logger.info(f"Received message from Redis channel {channel}: {data}")
 
-        except asyncio.CancelledError:
-            logger.info("Redis listener cancelled")
+                    if channel == REDIS_STATE_RESULT_CHANNEL:
+                        # Store raw message in the database
+                        self.store_state_result_sync(data)
+                        # Trigger notification with raw message
+                        self.trigger_notification_sync(data)
+
+                    # Forward the message to the WebSocket group
+                    async_to_sync(channel_layer.group_send)(
+                        "llm_output",
+                        {
+                            "type": "send_message",
+                            "message": json.dumps({
+                                "channel": channel,
+                                "message": data
+                            })
+                        }
+                    )
+
+        except KeyboardInterrupt:
+            logger.info("Redis listener stopped")
         except Exception as e:
-            logger.error(f"Unexpected error in Redis listener: {str(e)}")
+            logger.error(f"Unexpected error in Redis listener: {str(e)}", exc_info=True)
         finally:
             pubsub.unsubscribe()
             redis_client.close()
             logger.info("Redis connection closed")
 
-    @sync_to_async
-    def store_state_result(self, raw_message):
+    def run_scheduled_alerts_processor(self, redis_client):
+        try:
+            process_scheduled_alerts_sync(redis_client)
+        except Exception as e:
+            logger.error(f"Error in scheduled alerts processor: {str(e)}", exc_info=True)
+
+    def store_state_result_sync(self, raw_message):
         try:
             conn = psycopg2.connect(
                 host=settings.DATABASES['default']['HOST'],
@@ -120,8 +128,7 @@ class Command(BaseCommand):
             if conn:
                 conn.close()
 
-    @sync_to_async
-    def trigger_notification(self, raw_message):
+    def trigger_notification_sync(self, raw_message):
         try:
             # Create a mock request object
             request = HttpRequest()
