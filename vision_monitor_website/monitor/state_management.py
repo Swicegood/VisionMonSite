@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 alert_manager = AlertManager()
 
 camera_state_windows = {}
-state_key_phrases = ["busy", "festival happening", "crowd gathering", "night-time", "quiet", "person present", "people eating", "door open"]
+state_key_phrases = ["bustling", "festival happening", "crowd gathering", "night-time", "quiet", "person present", "people eating", "door open"]
 
 def parse_facility_state(raw_message):
     try:
@@ -30,7 +30,7 @@ def parse_facility_state(raw_message):
         
         alerts = []
         for camera_id, state in most_frequent_states.items():
-            is_alerting = any(phrase in state.lower() for phrase in ["busy", "festival happening", "crowd gathering", "door open"])
+            is_alerting = any(phrase in state.lower() for phrase in ["bustling", "festival happening", "crowd gathering", "door open"])
             alert_result = alert_manager.update_state(camera_id, is_alerting)
             if alert_result:
                 alerts.append((camera_id, alert_result, state))

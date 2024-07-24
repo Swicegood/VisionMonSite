@@ -11,6 +11,7 @@ import psycopg2
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpRequest
+from monitor.notifications import process_scheduled_alerts
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ REDIS_STATE_CHANNEL = 'state_processing'
 REDIS_STATE_RESULT_CHANNEL = 'state_result'
 
 class Command(BaseCommand):
-    help = 'Runs a Redis listener'
+    help = 'Runs a Redis listener and processes scheduled alerts'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -32,18 +33,27 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['daemon']:
-            self.stdout.write('Starting Redis listener in daemon mode...')
+            self.stdout.write('Starting Redis listener and scheduled alerts processor in daemon mode...')
             # Implement daemon logic here if needed
         else:
-            self.stdout.write('Starting Redis listener...')
+            self.stdout.write('Starting Redis listener and scheduled alerts processor...')
         
-        asyncio.run(self.listen_to_redis())
+        asyncio.run(self.run_listener_and_processor())
 
-    async def listen_to_redis(self):
+    async def run_listener_and_processor(self):
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        channel_layer = get_channel_layer()
+
+        # Create tasks for both Redis listening and processing scheduled alerts
+        listener_task = asyncio.create_task(self.listen_to_redis(redis_client, channel_layer))
+        alerts_task = asyncio.create_task(process_scheduled_alerts(redis_client))
+
+        # Wait for both tasks to complete (which they never should)
+        await asyncio.gather(listener_task, alerts_task)
+
+    async def listen_to_redis(self, redis_client, channel_layer):
         pubsub = redis_client.pubsub()
         pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
-        channel_layer = get_channel_layer()
 
         logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
 

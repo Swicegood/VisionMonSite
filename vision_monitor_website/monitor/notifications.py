@@ -1,6 +1,8 @@
 import logging
 import tempfile
 import os
+import json
+import base64
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .discord_client import send_discord
@@ -9,6 +11,8 @@ from .state_management import parse_facility_state, alert_manager
 from .db_operations import fetch_latest_facility_state
 
 logger = logging.getLogger(__name__)
+
+ALERT_QUEUE = 'alert_queue'
 
 def notify(request, raw_message=None, specific_camera_id=None):
     if raw_message is None:
@@ -64,20 +68,65 @@ def notify(request, raw_message=None, specific_camera_id=None):
         logger.info("Alerts processed successfully")
     else:
         logger.info("No alerts to process")
-        
+
+async def process_scheduled_alerts(redis_client):
+    while True:
+        try:
+            # Wait for alert in the queue
+            _, alert_data = await redis_client.blpop(ALERT_QUEUE)
+            alert = json.loads(alert_data)
+
+            camera_id = alert['camera_id']
+            check_time = alert['check_time']
+            message = alert['message']
+            frame_data = alert['frame']
+
+            if frame_data:
+                # Decode the base64 image
+                image_data = base64.b64decode(frame_data)
+                
+                # Create a temporary file for the image
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                    temp_image.write(image_data)
+                    image_path = temp_image.name
+
+                # Send the alert with the image
+                try:
+                    success = send_discord([(image_path, camera_id)], message, str(timezone.now()))
+                    if success:
+                        logger.info(f"Scheduled alert sent successfully for camera {camera_id}")
+                    else:
+                        logger.error(f"Failed to send scheduled alert for camera {camera_id}")
+                except Exception as e:
+                    logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
+                
+                # Clean up the temporary file
+                os.unlink(image_path)
+            else:
+                logger.warning(f"No image data available for scheduled alert from camera {camera_id}")
+                # Send the alert without an image
+                try:
+                    success = send_discord([], message, str(timezone.now()))
+                    if success:
+                        logger.info(f"Scheduled alert sent successfully for camera {camera_id} (without image)")
+                    else:
+                        logger.error(f"Failed to send scheduled alert for camera {camera_id} (without image)")
+                except Exception as e:
+                    logger.error(f"Error in send_discord for scheduled alert, camera {camera_id}: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error processing scheduled alert: {str(e)}")
+
 def test_notification(request):
     try:
         message = "TEST NOTIFICATION: This is a test message with the latest image."
         current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # For testing, we'll use camera index 1
-        camera_id = 1
-        
         try:
-            latest_image = get_latest_image(request, camera_id.split(' ')[1])
-            logger.info("Latest image retrieved successfully")
+            latest_image = get_latest_image(request, 1)  # Assuming camera_index 1 for the test
+            logger.info("Latest image retrieved successfully for test notification")
         except Exception as e:
-            logger.error(f"Error retrieving latest image: {str(e)}")
+            logger.error(f"Error retrieving latest image for test notification: {str(e)}")
             latest_image = None
 
         if isinstance(latest_image, HttpResponse) and latest_image.status_code == 200:
@@ -88,26 +137,26 @@ def test_notification(request):
             logger.info(f"Temporary image file created at: {temp_image_path}")
             
             try:
-                success = send_discord([(temp_image_path, f"Camera {camera_id}")], message, current_time)
-                logger.info(f"send_discord called with image. Result: {success}")
+                success = send_discord([(temp_image_path, "Test Camera")], message, current_time)
+                logger.info(f"send_discord called with image for test. Result: {success}")
             except Exception as e:
-                logger.error(f"Error in send_discord: {str(e)}")
+                logger.error(f"Error in send_discord for test notification: {str(e)}")
                 success = False
             
             os.unlink(temp_image_path)
-            logger.info("Temporary image file deleted")
+            logger.info("Temporary image file deleted after test notification")
             
             if success:
                 return JsonResponse({"status": "success", "message": "Test notification with image sent successfully"})
             else:
                 return JsonResponse({"status": "error", "message": "Failed to send test notification with image"}, status=500)
         else:
-            logger.warning("Latest image not available or invalid")
+            logger.warning("Latest image not available or invalid for test notification")
             try:
-                success = send_discord(None, message + " (Image unavailable)", current_time)
-                logger.info(f"send_discord called without image. Result: {success}")
+                success = send_discord([], message + " (Image unavailable)", current_time)
+                logger.info(f"send_discord called without image for test. Result: {success}")
             except Exception as e:
-                logger.error(f"Error in send_discord: {str(e)}")
+                logger.error(f"Error in send_discord for test notification without image: {str(e)}")
                 success = False
             
             if success:
@@ -117,3 +166,8 @@ def test_notification(request):
     except Exception as e:
         logger.exception("Unexpected error in test_notification view")
         return JsonResponse({"status": "error", "message": f"Unexpected error: {str(e)}"}, status=500)
+
+# This function can be called to start processing scheduled alerts
+def start_processing_scheduled_alerts():
+    import asyncio
+    asyncio.run(process_scheduled_alerts())

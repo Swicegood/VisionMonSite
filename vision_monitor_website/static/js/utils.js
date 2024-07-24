@@ -11,7 +11,7 @@ export function colorCodeState(element, state) {
 
     const lowerState = state.toLowerCase();
 
-    if (lowerState.includes('busy')) {
+    if (lowerState.includes('bustling')) {
         element.classList.add('bg-danger', 'text-white');
     } else if (lowerState.includes('night-time')) {
         element.classList.add('bg-secondary', 'text-white');
