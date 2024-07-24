@@ -71,6 +71,10 @@ camera_alert_config = {
         "penalty": 0.6,
         "alert_states": {"bustling", "crowd gathering", "festival happening"}
     },
+        "Temple 13": {
+        "penalty": 0.6,
+        "alert_states": {"festival happening"}
+    },
     # Add other cameras with their specific penalties and problematic states
 }
 
