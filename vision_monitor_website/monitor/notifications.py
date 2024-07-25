@@ -46,7 +46,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
 
             if image_paths:
                 try:
-                    success = send_discord(image_paths, message, str(timezone.now()))
+                    success = send_discord(image_paths, message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
                     logger.info(f"send_discord called for camera {camera_id}. Result: {success}")
                 except Exception as e:
                     logger.error(f"Error in send_discord for camera {camera_id}: {str(e)}")
