@@ -17,9 +17,24 @@ body {
 
 #camera-states, .camera-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
     margin-bottom: 20px;
+}
+
+/* Landscape mode: 2 rows of 9 columns */
+@media (orientation: landscape) {
+    #camera-states, .camera-grid {
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(2, auto);
+    }
+}
+
+/* Portrait mode: 5 rows of 4 columns */
+@media (orientation: portrait) {
+    #camera-states, .camera-grid {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(5, auto);
+    }
 }
 
 .camera-state, .camera-feed {
