@@ -11,7 +11,7 @@ import psycopg2
 from django.utils import timezone
 from django.urls import reverse
 from django.http import HttpRequest
-from monitor.notifications import process_scheduled_alerts_sync  # Updated import
+from monitor.notifications import process_scheduled_alerts_sync, notify
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options['daemon']:
             self.stdout.write('Starting Redis listener and scheduled alerts processor in daemon mode...')
-            # Implement daemon logic here if needed
         else:
             self.stdout.write('Starting Redis listener and scheduled alerts processor...')
         
@@ -44,15 +43,12 @@ class Command(BaseCommand):
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         channel_layer = get_channel_layer()
 
-        # Create and start the Redis listener thread
         listener_thread = threading.Thread(target=self.listen_to_redis_sync, args=(redis_client, channel_layer))
         listener_thread.start()
 
-        # Create and start the scheduled alerts processor thread
         alerts_thread = threading.Thread(target=self.run_scheduled_alerts_processor, args=(redis_client,))
         alerts_thread.start()
 
-        # Wait for both threads to complete (which they never should)
         listener_thread.join()
         alerts_thread.join()
 
@@ -74,12 +70,9 @@ class Command(BaseCommand):
                     logger.info(f"Received message from Redis channel {channel}: {data}")
 
                     if channel == REDIS_STATE_RESULT_CHANNEL:
-                        # Store raw message in the database
                         self.store_state_result_sync(data)
-                        # Trigger notification with raw message
                         self.trigger_notification_sync(data)
 
-                    # Forward the message to the WebSocket group
                     async_to_sync(channel_layer.group_send)(
                         "llm_output",
                         {
@@ -130,16 +123,31 @@ class Command(BaseCommand):
 
     def trigger_notification_sync(self, raw_message):
         try:
-            # Create a mock request object
-            request = HttpRequest()
-            request.META['SERVER_NAME'] = 'example.com'  # Use a default domain or get it from settings
-            request.META['SERVER_PORT'] = '8000'  # Adjust if your port is different
+            conn = psycopg2.connect(
+                host=settings.DATABASES['default']['HOST'],
+                database=settings.DATABASES['default']['NAME'],
+                user=settings.DATABASES['default']['USER'],
+                password=settings.DATABASES['default']['PASSWORD'],
+                port=settings.DATABASES['default']['PORT'],
+            )
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) FROM state_result
+                    WHERE timestamp >= %s
+                """, (timezone.now() - timezone.timedelta(hours=1),))
+                count = cursor.fetchone()[0]
 
-            # Import here to avoid circular import
-            from monitor.notifications import notify
+            if count >= 15:
+                request = HttpRequest()
+                request.META['SERVER_NAME'] = 'example.com'
+                request.META['SERVER_PORT'] = '8000'
 
-            # Call the notify function with raw message
-            notify(request, raw_message)
-            logger.info(f"Triggered notification with raw message")
+                notify(request, raw_message)
+                logger.info(f"Triggered notification with raw message")
+            else:
+                logger.info(f"Skipped notification. Only {count} state results in the last hour.")
         except Exception as e:
-            logger.error(f"Error triggering notification: {str(e)}")
+            logger.error(f"Error in trigger_notification_sync: {str(e)}")
+        finally:
+            if conn:
+                conn.close()
