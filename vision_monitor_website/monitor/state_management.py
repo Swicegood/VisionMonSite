@@ -79,6 +79,14 @@ camera_alert_config = {
         "penalty": 0.7,
         "alert_states": {"door open"}
     },
+    "Audio_Visual 1": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
+    "Field 6": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
     # Add other cameras with their specific penalties and problematic states
 }
 
