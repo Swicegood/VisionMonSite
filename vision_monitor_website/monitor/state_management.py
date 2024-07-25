@@ -87,6 +87,10 @@ camera_alert_config = {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
+    "Back_Driveway 2": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
     # Add other cameras with their specific penalties and problematic states
 }
 

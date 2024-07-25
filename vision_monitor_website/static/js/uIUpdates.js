@@ -48,12 +48,14 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         ? camera.description.substring(0, 150) + '...' 
         : camera.description;
         
+        feedDiv.id = `camera-${camera.cameraIndex}`;
         feedDiv.innerHTML = `
-            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="img-fluid" 
+            <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="camera-image img-fluid" 
                 data-bs-toggle="modal" data-bs-target="#imageModal" 
                 data-camera-index="${camera.cameraIndex}">
-            <div>${camera.cameraName} (Camera ${camera.cameraIndex})</div>
-            <div class="description" data-bs-toggle="modal" data-bs-target="#textModal" 
+            <div class="camera-name">${camera.cameraName} (Camera ${camera.cameraIndex})</div>
+            <div class="camera-timestamp">${new Date(camera.timestamp).toLocaleString()}</div>
+            <div class="camera-description" data-bs-toggle="modal" data-bs-target="#textModal" 
                 data-camera-index="${camera.cameraIndex}">${truncatedDescription}</div>
         `;
         
@@ -79,7 +81,6 @@ export function updateLLMOutput(llmMessages) {
         messageElement.innerHTML = `
             <div class="timestamp">${new Date(message.timestamp).toLocaleString()}</div>
             <div class="camera-info">Camera ${message.cameraName} (Index: ${message.cameraIndex})</div>
-            <div class="timestamp">${message.timestamp}</div>
             <div class="description">${message.description}</div>
         `;
         llmOutput.appendChild(messageElement);
@@ -89,14 +90,37 @@ export function updateLLMOutput(llmMessages) {
 
 export function updateSingleCamera(camera) {
     const cameraElement = document.getElementById(`camera-${camera.cameraIndex}`);
-    if (cameraElement) {
-        const imageElement = cameraElement.querySelector('img');
-        const timestampElement = cameraElement.querySelector('.timestamp');
-        const descriptionElement = cameraElement.querySelector('.description');
+    if (!cameraElement) {
+        logger.warn(`Camera element not found for index ${camera.cameraIndex}`);
+        return;
+    }
 
-        imageElement.src = getLatestImageUrl(camera.cameraIndex);
-        timestampElement.textContent = new Date(camera.timestamp).toLocaleString();
-        descriptionElement.textContent = camera.description;
+    try {
+        const imageElement = cameraElement.querySelector('.camera-image');
+        const timestampElement = cameraElement.querySelector('.camera-timestamp');
+        const descriptionElement = cameraElement.querySelector('.camera-description');
+
+        if (imageElement) {
+            imageElement.src = getLatestImageUrl(camera.cameraIndex);
+        } else {
+            logger.warn(`Image element not found for camera ${camera.cameraIndex}`);
+        }
+
+        if (timestampElement) {
+            timestampElement.textContent = new Date(camera.timestamp).toLocaleString();
+        } else {
+            logger.warn(`Timestamp element not found for camera ${camera.cameraIndex}`);
+        }
+
+        if (descriptionElement) {
+            descriptionElement.textContent = camera.description;
+        } else {
+            logger.warn(`Description element not found for camera ${camera.cameraIndex}`);
+        }
+
+        logger.info(`Updated camera ${camera.cameraIndex} successfully`);
+    } catch (error) {
+        logger.error(`Error updating camera ${camera.cameraIndex}: ${error.message}`);
     }
 }
 
