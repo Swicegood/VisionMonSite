@@ -95,7 +95,7 @@ def process_scheduled_alerts_sync(redis_client):
 
                     # Send the alert with the image
                     try:
-                        success = send_discord([(image_path, camera_id)], message, str(timezone.now().strftime("%Y-%m-%d %H:%M:%S")))
+                        success = send_discord([(image_path, camera_id)], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
                         if success:
                             logger.info(f"Scheduled alert sent successfully for camera {camera_id}")
                         else:
@@ -109,7 +109,7 @@ def process_scheduled_alerts_sync(redis_client):
                     logger.warning(f"No image data available for scheduled alert from camera {camera_id}")
                     # Send the alert without an image
                     try:
-                        success = send_discord([], message, str(timezone.now().strftime("%Y-%m-%d %H:%M:%S")))
+                        success = send_discord([], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
                         if success:
                             logger.info(f"Scheduled alert sent successfully for camera {camera_id} (without image)")
                         else:
@@ -125,7 +125,7 @@ def process_scheduled_alerts_sync(redis_client):
 def test_notification(request):
     try:
         message = "TEST NOTIFICATION: This is a test message with the latest image."
-        current_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
         
         try:
             latest_image = get_latest_image(request, 1)  # Assuming camera_index 1 for the test

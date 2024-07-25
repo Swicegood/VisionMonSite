@@ -14,6 +14,7 @@ from .image_handling import get_composite_images
 from .notifications import notify, test_notification
 
 logger = logging.getLogger(__name__)
+timezone.activate(timezone.get_current_timezone())
 
 def home(request):
     return render(request, 'monitor/home.html')
