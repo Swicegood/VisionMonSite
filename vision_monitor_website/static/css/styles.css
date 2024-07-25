@@ -23,9 +23,13 @@ body {
 
 /* Landscape mode: 2 rows of 9 columns */
 @media (orientation: landscape) {
-    #camera-states, .camera-grid {
+    #camera-states {
         grid-template-columns: repeat(9, 1fr);
         grid-template-rows: repeat(2, auto);
+    }
+    .camera-grid {
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(4, auto);
     }
 }
 

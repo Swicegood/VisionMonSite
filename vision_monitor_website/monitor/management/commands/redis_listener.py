@@ -1,6 +1,7 @@
 import threading
 import json
 import logging
+import time
 from django.core.management.base import BaseCommand
 from channels.layers import get_channel_layer
 import redis
@@ -20,6 +21,7 @@ REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 REDIS_MESSAGE_CHANNEL = 'llm_messages'
 REDIS_STATE_CHANNEL = 'state_processing'
 REDIS_STATE_RESULT_CHANNEL = 'state_result'
+REDIS_RECONNECT_DELAY = 5  # seconds
 
 class Command(BaseCommand):
     help = 'Runs a Redis listener and processes scheduled alerts'
@@ -40,64 +42,83 @@ class Command(BaseCommand):
         self.run_listener_and_processor()
 
     def run_listener_and_processor(self):
-        redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         channel_layer = get_channel_layer()
 
-        listener_thread = threading.Thread(target=self.listen_to_redis_sync, args=(redis_client, channel_layer))
+        listener_thread = threading.Thread(target=self.listen_to_redis_sync, args=(channel_layer,))
         listener_thread.start()
 
-        alerts_thread = threading.Thread(target=self.run_scheduled_alerts_processor, args=(redis_client,))
+        alerts_thread = threading.Thread(target=self.run_scheduled_alerts_processor)
         alerts_thread.start()
 
         listener_thread.join()
         alerts_thread.join()
 
-    def listen_to_redis_sync(self, redis_client, channel_layer):
-        pubsub = redis_client.pubsub()
-        pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
+    def get_redis_connection(self):
+        while True:
+            try:
+                redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+                redis_client.ping()  # Test the connection
+                return redis_client
+            except redis.ConnectionError:
+                logger.error(f"Failed to connect to Redis. Retrying in {REDIS_RECONNECT_DELAY} seconds...")
+                time.sleep(REDIS_RECONNECT_DELAY)
 
-        logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
+    def listen_to_redis_sync(self, channel_layer):
+        while True:
+            try:
+                redis_client = self.get_redis_connection()
+                pubsub = redis_client.pubsub()
+                pubsub.subscribe(REDIS_MESSAGE_CHANNEL, REDIS_STATE_RESULT_CHANNEL)
 
-        try:
-            for message in pubsub.listen():
-                logger.debug(f"Received from pubsub: {message}")
-                
-                if message['type'] == 'message':
-                    channel = message['channel'].decode('utf-8')
-                    data = message['data']
-                    if isinstance(data, bytes):
-                        data = data.decode('utf-8')
-                    logger.info(f"Received message from Redis channel {channel}: {data}")
+                logger.info(f"Subscribed to Redis channels: {REDIS_MESSAGE_CHANNEL}, {REDIS_STATE_RESULT_CHANNEL}")
 
-                    if channel == REDIS_STATE_RESULT_CHANNEL:
-                        self.store_state_result_sync(data)
-                        self.trigger_notification_sync(data)
+                for message in pubsub.listen():
+                    logger.debug(f"Received from pubsub: {message}")
+                    
+                    if message['type'] == 'message':
+                        channel = message['channel'].decode('utf-8')
+                        data = message['data']
+                        if isinstance(data, bytes):
+                            data = data.decode('utf-8')
+                        logger.info(f"Received message from Redis channel {channel}: {data}")
 
-                    async_to_sync(channel_layer.group_send)(
-                        "llm_output",
-                        {
-                            "type": "send_message",
-                            "message": json.dumps({
-                                "channel": channel,
-                                "message": data
-                            })
-                        }
-                    )
+                        if channel == REDIS_STATE_RESULT_CHANNEL:
+                            self.store_state_result_sync(data)
+                            self.trigger_notification_sync(data)
 
-        except KeyboardInterrupt:
-            logger.info("Redis listener stopped")
-        except Exception as e:
-            logger.error(f"Unexpected error in Redis listener: {str(e)}", exc_info=True)
-        finally:
-            pubsub.unsubscribe()
-            redis_client.close()
-            logger.info("Redis connection closed")
+                        async_to_sync(channel_layer.group_send)(
+                            "llm_output",
+                            {
+                                "type": "send_message",
+                                "message": json.dumps({
+                                    "channel": channel,
+                                    "message": data
+                                })
+                            }
+                        )
 
-    def run_scheduled_alerts_processor(self, redis_client):
-        try:
-            process_scheduled_alerts_sync(redis_client)
-        except Exception as e:
-            logger.error(f"Error in scheduled alerts processor: {str(e)}", exc_info=True)
+            except redis.ConnectionError:
+                logger.error("Lost connection to Redis. Attempting to reconnect...")
+                time.sleep(REDIS_RECONNECT_DELAY)
+            except Exception as e:
+                logger.error(f"Unexpected error in Redis listener: {str(e)}", exc_info=True)
+                time.sleep(REDIS_RECONNECT_DELAY)
+            finally:
+                try:
+                    pubsub.unsubscribe()
+                    redis_client.close()
+                except:
+                    pass
+                logger.info("Redis connection closed")
+
+    def run_scheduled_alerts_processor(self):
+        while True:
+            try:
+                redis_client = self.get_redis_connection()
+                process_scheduled_alerts_sync(redis_client)
+            except Exception as e:
+                logger.error(f"Error in scheduled alerts processor: {str(e)}", exc_info=True)
+                time.sleep(REDIS_RECONNECT_DELAY)
 
     def store_state_result_sync(self, raw_message):
         try:
