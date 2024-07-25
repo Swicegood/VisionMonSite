@@ -79,6 +79,7 @@ export function updateLLMOutput(llmMessages) {
         messageElement.innerHTML = `
             <div class="timestamp">${new Date(message.timestamp).toLocaleString()}</div>
             <div class="camera-info">Camera ${message.cameraName} (Index: ${message.cameraIndex})</div>
+            <div class="timestamp">${message.timestamp}</div>
             <div class="description">${message.description}</div>
         `;
         llmOutput.appendChild(messageElement);
