@@ -1,3 +1,4 @@
+import { cameraMap } from './stateManagement.js';
 import { getLatestImageUrl, getCompositeImageUrl, colorCodeState } from './utils.js';
 
 const cameraFeeds = document.getElementById('camera-feeds');
@@ -29,7 +30,6 @@ export function updateCameraStates(cameraStates) {
         colorCodeState(stateDiv, state);
         cameraStatesDiv.appendChild(stateDiv);
     }
-    setupModalListeners();
 }
 
 export function updateCameraFeeds(cameraStates, cameraMap) {
@@ -65,8 +65,6 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         
         cameraFeeds.appendChild(feedDiv);
     });
-    
-    setupModalListeners(cameraMap);
 }
 
 export function updateLLMOutput(llmMessages) {
@@ -99,6 +97,9 @@ export function updateSingleCamera(camera) {
         const imageElement = cameraElement.querySelector('.camera-image');
         const timestampElement = cameraElement.querySelector('.camera-timestamp');
         const descriptionElement = cameraElement.querySelector('.camera-description');
+        const truncatedDescription = camera.description.length > 150 
+        ? camera.description.substring(0, 150) + '...' 
+        : camera.description;
 
         if (imageElement) {
             imageElement.src = getLatestImageUrl(camera.cameraIndex);
@@ -113,7 +114,7 @@ export function updateSingleCamera(camera) {
         }
 
         if (descriptionElement) {
-            descriptionElement.textContent = camera.description;
+            descriptionElement.textContent = truncatedDescription;
         } else {
             logger.warn(`Description element not found for camera ${camera.cameraIndex}`);
         }
@@ -133,7 +134,7 @@ export function updateFacilityState(state, timestamp) {
     }
 }
 
-function setupModalListeners(cameraMap) {
+export function setupModalListeners() {
     const compositeImageModal = document.getElementById('compositeImageModal');
     const compositeModalImage = document.getElementById('compositeModalImage');
     const imageModal = document.getElementById('imageModal');
@@ -161,7 +162,7 @@ function setupModalListeners(cameraMap) {
         textModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             const cameraIndex = button.getAttribute('data-camera-index');
-            const camera = [...cameraMap.values()].find(c => c.cameraIndex == cameraIndex);
+            const camera = cameraMap.get(cameraIndex);
             if (camera) {
                 fullText.textContent = camera.description;
             }
@@ -198,4 +199,9 @@ function colorCodeAlertStatus(element, status) {
         default:
             element.classList.add('bg-secondary');
     }
+}
+
+// Call this function after updating the DOM
+export function initializeModalListeners() {
+    setupModalListeners();
 }

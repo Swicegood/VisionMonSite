@@ -63,27 +63,7 @@ def update_camera_state(camera_id, state, timestamp):
 
 # Define alert state penalties and problematic states for specific cameras
 camera_alert_config = {
-    "Hall 8": {
-        "penalty": 0.6,
-        "alert_states": {"bustling", "crowd gathering", "festival happening"}
-    },
-    "Stage 12": {
-        "penalty": 0.6,
-        "alert_states": {"bustling", "crowd gathering", "festival happening"}
-    },
-    "Temple 13": {
-        "penalty": 0.6,
-        "alert_states": {"festival happening"}
-    },
-    "Bhoga_Shed 3": {
-        "penalty": 0.7,
-        "alert_states": {"door open"}
-    },
     "Audio_Visual 1": {
-        "penalty": 0.7,
-        "alert_states": {"bustling"}
-    },
-    "Field 6": {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
@@ -91,8 +71,32 @@ camera_alert_config = {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
-    # Add other cameras with their specific penalties and problematic states
-}
+    "Bhoga_Shed 3": {
+        "penalty": 0.7,
+        "alert_states": {"door open"}
+    },
+    "Field 6": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
+    "Hall 8": {
+        "penalty": 0.5,
+        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+    },
+    "Kitchen 9": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
+    "Stage 12": {
+        "penalty": 0.4,
+        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+    },
+    "Temple 13": {
+        "penalty": 0.5,
+        "alert_states": {"festival happening"}
+    }
+        # Add other cameras with their specific penalties and problematic states
+    }
 
 def get_most_frequent_state(camera_id):
     if camera_id not in camera_state_windows:

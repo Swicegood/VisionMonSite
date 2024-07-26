@@ -1,6 +1,7 @@
 import { initializeWebSocket } from './websocket.js';
 import { initializePage } from './stateManagement.js';
 import { refreshImages } from './utils.js';
+import { initializeModalListeners } from './uIUpdates.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     const initialDataElement = document.getElementById('initial-data');
@@ -18,5 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initializePage(initialData);
     initializeWebSocket();
+    initializeModalListeners();
     setInterval(refreshImages, 30000);
 });

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/828356057680183377/VJLxRe7a0zzCmy6Q7LNVEy2qMD99yJLRARJ7RkYys5UQcY0yaO3HJFXbeM0Pox0FPMiA'
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MiB in bytes
 
-def send_discord_message(image_paths, message, ttime, username="New Goloka Monitor"):
+def send_discord_message(image_paths, message, ttime, title):
     files = []
     attachments = []
     total_size = 0
@@ -43,7 +43,7 @@ def send_discord_message(image_paths, message, ttime, username="New Goloka Monit
         })
 
     payload = {
-        "username": username,
+        "username": title,
         "embeds": embeds,
         "attachments": attachments
     }
@@ -66,9 +66,9 @@ def send_discord_message(image_paths, message, ttime, username="New Goloka Monit
             logger.error(f"Response content: {e.response.text}")
         return False
 
-def send_discord(image_paths, message, ttime):
+def send_discord(image_paths, message, ttime, title):
     try:
-        return send_discord_message(image_paths, message, ttime)
+        return send_discord_message(image_paths, message, ttime, title)
     except Exception as e:
         logger.exception("Unexpected error in send_discord")
         return False

@@ -31,6 +31,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
     for camera_id, alert_type, state in alerts:
         if alert_type in ["ALERT", "RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
             message = f"Alert for camera {camera_id} {alert_type} - State: {state}"
+            title = f"{camera_id} {alert_type} {state}"
             image_paths = []
 
             try:
@@ -46,7 +47,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
 
             if image_paths:
                 try:
-                    success = send_discord(image_paths, message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
+                    success = send_discord(image_paths, message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
                     logger.info(f"send_discord called for camera {camera_id}. Result: {success}")
                 except Exception as e:
                     logger.error(f"Error in send_discord for camera {camera_id}: {str(e)}")
@@ -82,6 +83,7 @@ def process_scheduled_alerts_sync(redis_client):
                 camera_id = alert['camera_id']
                 check_time = alert['check_time']
                 message = alert['message']
+                title = alert['camera_id']
                 frame_data = alert['frame']
 
                 if frame_data:
@@ -95,7 +97,7 @@ def process_scheduled_alerts_sync(redis_client):
 
                     # Send the alert with the image
                     try:
-                        success = send_discord([(image_path, camera_id)], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
+                        success = send_discord([(image_path, camera_id)], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
                         if success:
                             logger.info(f"Scheduled alert sent successfully for camera {camera_id}")
                         else:
@@ -109,7 +111,7 @@ def process_scheduled_alerts_sync(redis_client):
                     logger.warning(f"No image data available for scheduled alert from camera {camera_id}")
                     # Send the alert without an image
                     try:
-                        success = send_discord([], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")))
+                        success = send_discord([], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
                         if success:
                             logger.info(f"Scheduled alert sent successfully for camera {camera_id} (without image)")
                         else:
@@ -126,6 +128,7 @@ def test_notification(request):
     try:
         message = "TEST NOTIFICATION: This is a test message with the latest image."
         current_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
+        title = f"Test ALTERT {current_time}"
         
         try:
             latest_image = get_latest_image(request, 1)  # Assuming camera_index 1 for the test
@@ -142,7 +145,7 @@ def test_notification(request):
             logger.info(f"Temporary image file created at: {temp_image_path}")
             
             try:
-                success = send_discord([(temp_image_path, "Test Camera")], message, current_time)
+                success = send_discord([(temp_image_path, "Test Camera")], message, current_time, title)
                 logger.info(f"send_discord called with image for test. Result: {success}")
             except Exception as e:
                 logger.error(f"Error in send_discord for test notification: {str(e)}")
@@ -158,7 +161,7 @@ def test_notification(request):
         else:
             logger.warning("Latest image not available or invalid for test notification")
             try:
-                success = send_discord([], message + " (Image unavailable)", current_time)
+                success = send_discord([], message + " (Image unavailable)", current_time, title)
                 logger.info(f"send_discord called without image for test. Result: {success}")
             except Exception as e:
                 logger.error(f"Error in send_discord for test notification without image: {str(e)}")
