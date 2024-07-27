@@ -34,7 +34,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
             message = f"Alert for camera {camera_id} {alert_type} - State: {state}"
             title = f"{camera_id} {alert_type} {state}"
             image_paths = []
-        if alert_type == "RESOLVED":
+        elif alert_type == "RESOLVED":
             message = f"Alert for camera {camera_id} {alert_type}"
             title = f"{camera_id} {alert_type}"
             image_paths = []

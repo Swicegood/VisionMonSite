@@ -1,6 +1,8 @@
 import psycopg2
 import logging
 from django.conf import settings
+from psycopg2.extras import DictCursor
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -93,5 +95,20 @@ def insert_facility_status(raw_message, timestamp):
     except psycopg2.Error as e:
         logger.error(f"Database error when inserting facility status: {e}")
         return False
+    finally:
+        conn.close()
+        
+async def fetch_daily_descriptions():
+    conn = psycopg2.connect(database="your_db", user="your_user", password="your_password", host="your_host")
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            yesterday = timezone.now() - timezone.timedelta(days=1)
+            cur.execute("""
+                SELECT camera_name, description
+                FROM visionmon_metadata
+                WHERE timestamp >= %s
+                ORDER BY timestamp
+            """, (yesterday,))
+            return [dict(row) for row in cur.fetchall()]
     finally:
         conn.close()
