@@ -65,7 +65,24 @@ def notify(request, raw_message=None, specific_camera_id=None):
                 logger.warning(f"No valid image found for camera {camera_id}")
         else:
             logger.info(f"No notification required for camera {camera_id} ({alert_type})")
-            
+    
+    if facility_state:
+        if "bustling" in facility_state.lower():      
+            logger.info("Facility state is bustling")
+            message = "Facility state is bustling"
+            title = "ALERT Facility: {facility_state}"
+            try:
+                success = send_discord([], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
+                if success:
+                    logger.info("Discord message sent for ALERT facility state")
+                else:
+                    logger.error("Failed to send Discord message for ALERT facility state")
+            except Exception as e:
+                logger.error(f"Error in send_discord for facility state: {str(e)}")    
+        logger.info(f"Facility state: {facility_state}")
+    else:
+        logger.warning("No facility state available")
+    
     if alerts:
         logger.info("Alerts processed successfully")
     else:
