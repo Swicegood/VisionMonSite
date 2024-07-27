@@ -187,9 +187,16 @@ def get_most_frequent_facility_state():
         logger.warning("No relevant states found in facility states")
         return facility_state_window[-1][0]  # Return the most recent state if no relevant states
     
-    # Create a weighted Counter here
-    
-    state_counts = Counter(relevant_states)
+    # Create a weighted Counter
+    state_counts = Counter()
+    for state in relevant_states:
+        for config_state, config in facility_config.items():
+            if config_state in state.lower():
+                state_counts[state] += config["penalty"]
+                break
+        else:
+            state_counts[state] += 1.0  # Default weight if no specific config
+
     most_common_state = state_counts.most_common(1)[0][0]
     logger.info(f"Most frequent facility state: {most_common_state}")
     return most_common_state
