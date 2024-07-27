@@ -10,6 +10,7 @@ from .discord_client import send_discord
 from .image_handling import get_latest_image
 from .state_management import parse_facility_state, alert_manager
 from .db_operations import fetch_latest_facility_state
+from .config import camera_names
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,15 @@ def notify(request, raw_message=None, specific_camera_id=None):
         alerts = [alert for alert in alerts if alert[0] == specific_camera_id]
     
     for camera_id, alert_type, state in alerts:
-        if alert_type in ["ALERT", "RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
+        if alert_type in ["ALERT", "FLAPPING_START", "FLAPPING_END"]:
             message = f"Alert for camera {camera_id} {alert_type} - State: {state}"
             title = f"{camera_id} {alert_type} {state}"
             image_paths = []
+        if alert_type == "RESOLVED":
+            message = f"Alert for camera {camera_id} {alert_type}"
+            title = f"{camera_id} {alert_type}"
+            image_paths = []
+            
 
             try:
                 latest_image = get_latest_image(request, camera_id.split(' ')[1])
@@ -67,7 +73,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
             logger.info(f"No notification required for camera {camera_id} ({alert_type})")
     
     if facility_state:
-        if "bustling" in facility_state.lower():      
+        if facility_state.lower() in ["bustling", "festival happening", "crowd gathering", "over capacity"]:      
             logger.info("Facility state is bustling")
             message = "Facility state is bustling"
             title = "ALERT Facility: {facility_state}"
@@ -100,7 +106,7 @@ def process_scheduled_alerts_sync(redis_client):
                 camera_id = alert['camera_id']
                 check_time = alert['check_time']
                 message = alert['message']
-                title = alert['camera_id']
+                title = f"NOSHOW ALERT {camera_names[alert['camera_id']]}" 
                 frame_data = alert['frame']
 
                 if frame_data:

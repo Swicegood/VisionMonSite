@@ -83,7 +83,7 @@ camera_alert_config = {
         "alert_states": {"bustling"}
     },
     "Hall 8": {
-        "penalty": 0.5,
+        "penalty": 0.4,
         "alert_states": {"bustling", "crowd gathering", "festival happening"}
     },
     "Kitchen 9": {
@@ -99,7 +99,7 @@ camera_alert_config = {
         "alert_states": {"festival happening"}
     },
     "Axis 17": {
-        "penalty": 0.5,
+        "penalty": 0.4,
         "alert_states": {"festival happening"}
     }
     # Add other cameras with their specific penalties and problematic states
