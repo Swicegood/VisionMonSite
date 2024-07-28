@@ -43,3 +43,4 @@ discord
 aiohttp
 requests
 asyncpg
+aiocron
