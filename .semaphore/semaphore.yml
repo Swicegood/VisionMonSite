@@ -53,7 +53,7 @@ blocks:
             - |
               cat << EOF > temp_settings.py
               from config.settings import *
-              
+
               # Override the DATABASES setting
               DATABASES = {
                   'default': {
@@ -61,7 +61,15 @@ blocks:
                       'NAME': ':memory:',
                   }
               }
-              
+
+              # Security settings
+              DEBUG = False
+              SECRET_KEY = 'asdlkfjaw-9ruq2i3urhq3pryq3eirfhq2p3ryq3'  # Replace with a long, random string
+              SECURE_HSTS_SECONDS = 3600
+              SECURE_SSL_REDIRECT = True
+              SESSION_COOKIE_SECURE = True
+              CSRF_COOKIE_SECURE = True
+
               # Ensure other necessary settings are preserved
               # Add any other settings that need to be overridden here
               EOF
