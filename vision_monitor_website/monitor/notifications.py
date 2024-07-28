@@ -30,13 +30,12 @@ def notify(request, raw_message=None, specific_camera_id=None):
         alerts = [alert for alert in alerts if alert[0] == specific_camera_id]
     
     for camera_id, alert_type, state in alerts:
-        if alert_type in ["ALERT", "FLAPPING_START", "FLAPPING_END"]:
+        if alert_type in ["ALERT", "RESOLVED", "FLAPPING_START", "FLAPPING_END"]:
+            presented_state = state
+            if alert_type == "RESOLVED":
+                presented_state = ""
             message = f"Alert for camera {camera_id} {alert_type} - State: {state}"
-            title = f"{camera_id} {alert_type} {state}"
-            image_paths = []
-        elif alert_type == "RESOLVED":
-            message = f"Alert for camera {camera_id} {alert_type}"
-            title = f"{camera_id} {alert_type}"
+            title = f"{camera_id} {alert_type} {presented_state}"
             image_paths = []
             
 
