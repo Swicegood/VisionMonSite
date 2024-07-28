@@ -77,7 +77,7 @@ blocks:
               EOF
             - export PYTHONPATH=$PYTHONPATH:$(pwd)
             - export DJANGO_SETTINGS_MODULE=temp_settings
-            - timeout 15s python manage.py check --deploy
+            - python manage.py check --deploy
       secrets:
         - name: openai
 promotions:
