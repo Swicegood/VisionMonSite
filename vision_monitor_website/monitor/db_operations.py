@@ -1,5 +1,6 @@
 import psycopg2
 import logging
+import asyncpg
 from django.conf import settings
 from psycopg2.extras import DictCursor
 from django.utils import timezone
@@ -99,16 +100,29 @@ def insert_facility_status(raw_message, timestamp):
         conn.close()
         
 async def fetch_daily_descriptions():
-    conn = psycopg2.connect(database="your_db", user="your_user", password="your_password", host="your_host")
     try:
-        with conn.cursor(cursor_factory=DictCursor) as cur:
-            yesterday = timezone.now() - timezone.timedelta(days=1)
-            cur.execute("""
-                SELECT camera_name, description
-                FROM visionmon_metadata
-                WHERE timestamp >= %s
-                ORDER BY timestamp
-            """, (yesterday,))
-            return [dict(row) for row in cur.fetchall()]
-    finally:
-        conn.close()
+        conn = await asyncpg.connect(
+            host=settings.DATABASES['default']['HOST'],
+            database=settings.DATABASES['default']['NAME'],
+            user=settings.DATABASES['default']['USER'],
+            password=settings.DATABASES['default']['PASSWORD']
+        )
+        
+        # Fetch descriptions from the last 24 hours
+        query = """
+        SELECT camera_name, description
+        FROM visionmon_metadata
+        WHERE timestamp >= NOW() - INTERVAL '1 day'
+        ORDER BY timestamp DESC
+        """
+        
+        results = await conn.fetch(query)
+        
+        # Format results as a dictionary
+        daily_descriptions = {row['camera_name']: row['description'] for row in results}
+        
+        await conn.close()
+        return daily_descriptions
+    except Exception as e:
+        print(f"Error fetching daily descriptions: {str(e)}")
+        return {}

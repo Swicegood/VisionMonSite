@@ -14,7 +14,7 @@ from .db_operations import fetch_daily_descriptions
 
 SMTP_SERVER = os.getenv('SMTP_SERVER', '192.168.0.71')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 25))
-SMTP_FROM = os.getenv('SMTP_FROM')
+SMTP_FROM = os.getenv('SMTP_FROM',"jguru108@gmail.com")
 SMTP_TO = os.getenv('SMTP_TO', "jguru108@gmail.com")
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
@@ -49,7 +49,8 @@ async def generate_daily_summary():
         
         # Prepare the prompt for OpenAI
         prompt = f"""Create a concise summary of the day's activities at the temple based on the following camera descriptions. 
-        Focus on key events, unusual occurrences, and overall patterns of activity. 
+        Focus on key events of people, unusual occurrences, and overall patterns of human activity.
+        You will have to weed through much irrelavant descriptive text about the spaces and objects in the temple to find the human activities. 
         Organize the summary by different areas of the temple if possible.
 
         Camera Descriptions:
@@ -59,7 +60,7 @@ async def generate_daily_summary():
 
         # Call OpenAI API
         response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-2024-05-13",
             messages=[
                 {"role": "system", "content": "You are an AI assistant tasked with summarizing daily activities at a temple."},
                 {"role": "user", "content": prompt}
@@ -76,13 +77,10 @@ async def generate_daily_summary():
     except Exception as e:
         logger.error(f"Error generating or sending daily summary: {str(e)}")
 
-# Schedule the daily summary task
-@aiocron.crontab('31 7,8,0 * * *')  # Run every day at 7:31, 8:31, and 00:31
-async def scheduled_daily_summary():
-    await generate_daily_summary()
-
-# Function to start the scheduled tasks
 async def start_scheduled_tasks():
+    # Schedule the daily summary task
+    cron = aiocron.crontab('0 20,0 * * *', func=generate_daily_summary)
+    
     while True:
         await asyncio.sleep(3600)  # Sleep for an hour
 
@@ -91,7 +89,6 @@ def run_scheduler_in_thread():
     asyncio.set_event_loop(loop)
     
     try:
-        loop.create_task(scheduled_daily_summary())
         loop.run_until_complete(start_scheduled_tasks())
     except KeyboardInterrupt:
         pass

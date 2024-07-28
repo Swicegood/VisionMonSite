@@ -42,3 +42,4 @@ channels_redis
 discord
 aiohttp
 requests
+asyncpg
