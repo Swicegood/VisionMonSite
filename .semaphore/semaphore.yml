@@ -70,6 +70,7 @@ blocks:
               SESSION_COOKIE_SECURE = True
               CSRF_COOKIE_SECURE = True
               SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+              SECURE_HSTS_PRELOAD = True
 
               # Ensure other necessary settings are preserved
               # Add any other settings that need to be overridden here
