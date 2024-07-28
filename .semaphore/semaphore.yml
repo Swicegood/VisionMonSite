@@ -68,6 +68,8 @@ blocks:
             - export PYTHONPATH=$PYTHONPATH:$(pwd)
             - export DJANGO_SETTINGS_MODULE=temp_settings
             - python manage.py check --deploy
+      secrets:
+        - name: openai
 promotions:
   - name: Dockerize
     pipeline_file: pipeline_2.yml
