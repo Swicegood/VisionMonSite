@@ -72,7 +72,7 @@ camera_alert_config = {
     },
     "Back_Driveway 2": {
         "penalty": 0.7,
-        "alert_states": {"bustling"}
+        "alert_states": {"bustling", "festival happening"}
     },
     "Bhoga_Shed 3": {
         "penalty": 0.7,
@@ -99,7 +99,7 @@ camera_alert_config = {
         "alert_states": {"festival happening"}
     },
     "Axis 17": {
-        "penalty": 0.4,
+        "penalty": 0.3,
         "alert_states": {"festival happening"}
     }
     # Add other cameras with their specific penalties and problematic states
