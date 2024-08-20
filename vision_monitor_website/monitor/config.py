@@ -1,22 +1,10 @@
 import os
 
-# Redis configuration
-REDIS_HOST = os.getenv('REDIS_HOST', '192.168.0.71')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_QUEUE = os.getenv('REDIS_QUEUE', 'frame_queue')
-REDIS_CAMERA_CHANNEL = 'camera_processing'
-REDIS_STATE_CHANNEL = 'state_processing'
-REDIS_STATE_RESULT_CHANNEL = 'state_result'
-
 # Database configuration
 DB_HOST = os.getenv('DB_HOST', '192.168.0.71')
 DB_NAME = os.getenv('DB_NAME', 'visionmon')
 DB_USER = os.getenv('DB_USER', 'pguser')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'pgpass')
-
-# OpenAI configuration
-OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'http://192.168.0.199:1337/v1')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'lm-studio')
 
 
 # Camera information
