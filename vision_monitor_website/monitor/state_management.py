@@ -98,6 +98,10 @@ camera_alert_config = {
         "penalty": 0.5,
         "alert_states": {"festival happening"}
     },
+    "Walk-in 15": {
+        "penalty": 0.7,
+        "alert_states": {"door open"}
+    },
     "Axis 17": {
         "penalty": 0.3,
         "alert_states": {"festival happening"}
