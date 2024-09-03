@@ -75,7 +75,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
         if facility_state.lower() in ["bustling", "festival happening", "crowd gathering", "over capacity"]:      
             logger.info("Facility state is bustling")
             message = "Facility state is bustling"
-            title = "ALERT Facility: {facility_state}"
+            title = f"ALERT Facility: {facility_state}"
             try:
                 success = send_discord([], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
                 if success:
