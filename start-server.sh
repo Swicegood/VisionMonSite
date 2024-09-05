@@ -24,7 +24,7 @@ python manage.py redis_listener --daemon &
 
 # Start scheduler
 echo "Starting Scheduler..."
-python manage.py run_scheduler --daemon &
+python manage.py run_scheduler &
 
 # Start Nginx
 echo "Starting Nginx..."
