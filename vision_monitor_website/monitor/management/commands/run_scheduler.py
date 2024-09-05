@@ -18,6 +18,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logger = logging.getLogger(__name__)
         logger.info('Starting scheduler...')
         
         if options['daemon']:

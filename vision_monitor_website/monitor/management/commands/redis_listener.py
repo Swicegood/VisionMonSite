@@ -35,6 +35,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        logger = logging.getLogger(__name__)
         if options['daemon']:
             logger.info('Starting Redis listener and scheduled alerts processor in daemon mode...')
         else:
