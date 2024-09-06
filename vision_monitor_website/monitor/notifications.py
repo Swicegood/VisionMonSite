@@ -72,7 +72,7 @@ def notify(request, raw_message=None, specific_camera_id=None):
             logger.info(f"No notification required for camera {camera_id} ({alert_type})")
     
     if facility_state:
-        if facility_state.lower() in ["bustling", "festival happening", "crowd gathering", "over capacity"]:      
+        if facility_state.lower() in ["festival happening", "crowd gathering", "over capacity"]:      
             logger.info("Facility state is bustling")
             message = "Facility state is bustling"
             title = f"ALERT Facility: {facility_state}"
