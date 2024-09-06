@@ -46,5 +46,7 @@ EXPOSE 8000
 # Set the user to www-data
 USER www-data
 
+RUN echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+
 # Start the server
 CMD ["/opt/app/vision_monitor_website/start-server.sh"]
