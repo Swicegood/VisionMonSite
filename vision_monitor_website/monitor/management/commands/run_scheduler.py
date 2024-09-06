@@ -3,8 +3,6 @@ from monitor.openai_operations import run_scheduler
 import threading
 import logging
 
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
@@ -18,7 +16,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         logger = logging.getLogger(__name__)
         logger.info('Starting scheduler...')
         

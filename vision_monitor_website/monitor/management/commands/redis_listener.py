@@ -14,7 +14,6 @@ from django.urls import reverse
 from django.http import HttpRequest
 from monitor.notifications import process_scheduled_alerts_sync, notify
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 REDIS_HOST = os.getenv('REDIS_HOST', '192.168.0.71')
@@ -35,7 +34,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         logger = logging.getLogger(__name__)
         if options['daemon']:
             logger.info('Starting Redis listener and scheduled alerts processor in daemon mode...')

@@ -2,7 +2,6 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class LLMOutputConsumer(AsyncWebsocketConsumer):
