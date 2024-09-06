@@ -7,7 +7,7 @@ import time
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .discord_client import send_discord
-from .image_handling import get_latest_image
+from .image_handling import get_latest_image, get_latest_image_non_web
 from .state_management import parse_facility_state, alert_manager
 from .db_operations import fetch_latest_facility_state
 from .config import camera_names
@@ -145,6 +145,52 @@ def process_scheduled_alerts_sync(redis_client):
             logger.error(f"Error processing scheduled alert: {str(e)}")
         
         time.sleep(0.1)  # Small delay to prevent CPU overuse
+        
+def send_daily_summary(title, message):
+    message = message[:1000]  # Limit message length to 2000 characters
+    try:
+        try:
+            latest_image, timesstamp = get_latest_image_non_web(17)  # Assuming camera_index 1 for the test
+            logger.info("Latest image retrieved successfully for dIaily summary")
+        except Exception as e:
+            logger.error(f"Error retrieving latest image for daily summary: {str(e)}")
+            latest_image = None
+
+        if latest_image:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_image:
+                temp_image.write(latest_image)
+                temp_image_path = temp_image.name
+            
+            logger.info(f"Temporary image file created at: {temp_image_path}")
+            # Send the summary to Discord
+            try:
+                success = send_discord([(temp_image_path, "Axis Camera")], message, str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
+                if success:
+                    logger.info(f"Daily sumary sent successfully.")
+                else:
+                    logger.error(f"Failed to send daily summary")
+            except Exception as e:
+                logger.error(f"Error in send_discord for daily summary: {str(e)}")
+                
+            os.unlink(temp_image_path)
+            logger.info("Temporary image file deleted after test notification")
+            
+        else:
+            logger.warning("Latest image not available or invalid for test notification")
+            try:
+                success = send_discord([], message + " (Image unavailable)", str(timezone.localtime(timezone.now()).strftime("%Y-%m-%d %I:%M:%S %p")), title)
+                logger.info(f"send_discord called without image for test. Result: {success}")
+            except Exception as e:
+                logger.error(f"Error in send_discord for test notification without image: {str(e)}")
+                success = False
+            
+            if success:
+                    logger.info(f"Daily sumary sent successfully.")
+            else:
+                logger.error(f"Failed to send daily summary")
+    except Exception as e:
+        logger.exception(f"Unexpected error in daily summary: {str(e)}")
+
 
 def test_notification(request):
     try:

@@ -13,6 +13,7 @@ from functools import wraps
 import aiohttp
 
 from .db_operations import fetch_daily_descriptions
+from .notifications import send_daily_summary
 
 SMTP_SERVER = os.getenv('SMTP_SERVER', '192.168.0.71')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 25))
@@ -85,9 +86,14 @@ async def call_openai_api(prompt):
         raise
 
 @async_retry(max_retries=3, base_delay=1, max_delay=60)
-async def send_email(subject, body):
-    # Implement your email sending logic here
-    # This is a placeholder
+async def send_discord(subject, body):
+    send_daily_summary(subject, body)
+    logger.info(f"Sending discord: {subject}")
+    logger.debug(f"EDiscord body: {body}")
+    
+@async_retry(max_retries=3, base_delay=1, max_delay=60)
+async def send_email_async(subject, body):
+    send_email(subject, body)
     logger.info(f"Sending email: {subject}")
     logger.debug(f"Email body: {body}")
 
@@ -112,7 +118,8 @@ async def generate_daily_summary():
         summary = await call_openai_api(prompt)
         
         subject = f"Temple Activity Summary for {timezone.now().strftime('%Y-%m-%d')}"
-        await send_email(subject, summary)
+        await send_discord(subject, summary)
+        await send_email_async(subject, summary)
         
         logger.info("Daily summary generated and sent successfully.")
     except Exception as e:
