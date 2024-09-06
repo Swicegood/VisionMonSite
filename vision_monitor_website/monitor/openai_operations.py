@@ -18,6 +18,7 @@ SMTP_FROM = os.getenv('SMTP_FROM',"jguru108@gmail.com")
 SMTP_TO = os.getenv('SMTP_TO', "jguru108@gmail.com")
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+DEBUG = os.getenv('DEBUG', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -98,6 +99,11 @@ def run_scheduler_in_thread():
 
 # This function should be called when your application starts
 def run_scheduler():
+    if DEBUG:
+        asyncio.run(generate_daily_summary())
     scheduler_thread = threading.Thread(target=run_scheduler_in_thread)
     scheduler_thread.start()
     return scheduler_thread
+
+if __name__ == '__main__':
+    generate_daily_summary
