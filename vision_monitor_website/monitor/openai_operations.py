@@ -106,7 +106,7 @@ async def generate_daily_summary():
         
         # Call OpenAI API
         summary = await call_openai_api(prompt)
-        logger.info("Summary generated successfully.", summary)
+        logger.info(f"Summary generated successfully: {summary}")
         
         # Send email
         subject = f"Temple Activity Summary for {timezone.now().strftime('%Y-%m-%d')}"
