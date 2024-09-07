@@ -105,7 +105,7 @@ def process_scheduled_alerts_sync(redis_client):
                 camera_id = alert['camera_id']
                 check_time = alert['check_time']
                 message = alert['message']
-                title = f"NOSHOW ALERT {camera_names[alert['camera_id']]}" 
+                title = f"POSSIBLE NOSHOW {camera_names[alert['camera_id']]}" 
                 frame_data = alert['frame']
 
                 if frame_data:
