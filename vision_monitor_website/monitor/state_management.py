@@ -103,7 +103,7 @@ camera_alert_config = {
         "alert_states": {"door open"}
     },
     "Axis 17": {
-        "penalty": 0.3,
+        "penalty": 0.1,
         "alert_states": {"festival happening"}
     }
     # Add other cameras with their specific penalties and problematic states
