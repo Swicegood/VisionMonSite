@@ -110,8 +110,8 @@ camera_alert_config = {
 }
 
 facility_config = {
-    "bustling": {
-        "alert_states": ["bustling", "crowd gathering", "festival happening"],
+    "crowd gathering": {
+        "alert_states": ["crowd gathering", "festival happening"],
         "penalty":  1
     },
     "quiet": {
