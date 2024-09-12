@@ -6,6 +6,11 @@ DB_NAME = os.getenv('DB_NAME', 'visionmon')
 DB_USER = os.getenv('DB_USER', 'pguser')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'pgpass')
 
+# Redis configuration
+REDIS_HOST = os.getenv('REDIS_HOST', '192.168.0.71')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+ALERT_QUEUE = os.getenv('ALERT_QUEUE', 'alert_queue')
+
 
 # Camera information
 camera_names = {

@@ -12,6 +12,12 @@ from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analy
 from .state_management import parse_facility_state
 from .image_handling import get_composite_images
 from .notifications import notify, test_notification
+import base64
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from .db_operations import get_latest_frame
+from .redis_operations import connect_redis
+from .config import ALERT_QUEUE
 
 logger = logging.getLogger(__name__)
 timezone.activate(timezone.get_current_timezone())
@@ -126,13 +132,51 @@ def send_websocket_update(message):
     except Exception as e:
         logger.error(f"Error sending WebSocket update: {str(e)}")
 
-# You can add more utility functions here as needed
+@csrf_exempt
+async def no_show_webhook(request):
+    if request.method not in ['POST', 'GET']:
+        return HttpResponse("Method not allowed", status=405)
 
-# Example of how you might use the send_websocket_update function:
-# def some_view_that_updates_data(request):
-#     # ... process the request ...
-#     send_websocket_update(json.dumps({
-#         "type": "data_update",
-#         "content": "New data available"
-#     }))
-#     # ... rest of the view logic ...
+    # Extract data from custom headers
+    camera_id = request.headers.get('X-Camera-Id')
+    start_time = request.headers.get('X-Start-Time')
+    end_time = request.headers.get('X-End-Time')
+
+    if not all([camera_id, start_time, end_time]):
+        return HttpResponse("Missing required headers", status=400)
+
+    try:
+        # Get the latest frame for the camera
+        frame = await get_latest_frame(camera_id)
+        if frame is None:
+            return HttpResponse("No frame available", status=404)
+
+        # Convert frame to base64
+        if isinstance(frame, memoryview):
+            frame_bytes = frame.tobytes()
+        elif isinstance(frame, bytes):
+            frame_bytes = frame
+        elif isinstance(frame, str):
+            frame_bytes = frame.encode('utf-8')
+        else:
+            return HttpResponse(f"Unexpected frame type: {type(frame)}", status=500)
+
+        frame_base64 = base64.b64encode(frame_bytes).decode('utf-8')
+
+        # Prepare alert data
+        alert_data = {
+            'camera_id': camera_id,
+            'check_time': f"{start_time}-{end_time}",
+            'message': f"No person detected for camera {camera_id} between {start_time} and {end_time}",
+            'frame': frame_base64
+        }
+
+        # Push to Redis ALERT_QUEUE
+        redis_client = await connect_redis()
+        await redis_client.rpush(ALERT_QUEUE, json.dumps(alert_data))
+        redis_client.close()
+        await redis_client.wait_closed()
+
+        return HttpResponse("Alert queued successfully", status=200)
+    except Exception as e:
+        return HttpResponse(f"Error processing webhook: {str(e)}", status=500)

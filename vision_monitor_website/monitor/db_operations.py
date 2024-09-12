@@ -126,3 +126,24 @@ async def fetch_daily_descriptions():
     except Exception as e:
         print(f"Error fetching daily descriptions: {str(e)}")
         return {}
+    
+async def get_latest_frame(camera_id):
+    conn = get_db_connection()
+    if not conn:
+        logger.error("Database connection failed")
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT vb.data
+            FROM visionmon_binary_data vb
+            JOIN visionmon_metadata vm ON vb.id = vm.data_id
+            WHERE vm.camera_id = %s
+            ORDER BY vm.timestamp DESC
+            LIMIT 1
+        """, (camera_id,))
+        result = cur.fetchone()
+        return result[0] if result else None
+    except Exception as e:
+        print(f"Error fetching latest frame for camera {camera_id}: {str(e)}")
+        return None
