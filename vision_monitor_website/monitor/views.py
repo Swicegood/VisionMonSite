@@ -17,10 +17,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from .db_operations import get_latest_frame
 from .redis_operations import connect_redis
+import asyncio
+import aioredis
 from .config import ALERT_QUEUE
 
 logger = logging.getLogger(__name__)
 timezone.activate(timezone.get_current_timezone())
+
+class CustomTimeoutError(asyncio.TimeoutError, aioredis.RedisError):
+    pass
 
 def home(request):
     return render(request, 'monitor/home.html')
@@ -172,10 +177,15 @@ async def no_show_webhook(request):
         }
 
         # Push to Redis ALERT_QUEUE
-        redis_client = await connect_redis()
-        await redis_client.rpush(ALERT_QUEUE, json.dumps(alert_data))
-        redis_client.close()
-        await redis_client.wait_closed()
+        try:
+            redis_client = await connect_redis()
+            await redis_client.rpush(ALERT_QUEUE, json.dumps(alert_data))
+        except CustomTimeoutError:
+            logger.error("Timed out while trying to connect to Redis")
+        finally:
+            if 'redis_client' in locals() and redis_client is not None:
+                redis_client.close()
+                await redis_client.wait_closed()
 
         return HttpResponse("Alert queued successfully", status=200)
     except Exception as e:
