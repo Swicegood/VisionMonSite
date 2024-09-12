@@ -144,7 +144,7 @@ def no_show_webhook(request):
 
         # Store this webhook hit in Redis with an expiration
         redis_client = connect_redis()
-        redis_client.setex(f"webhook:{camera_id}", 86400, timestamp)  # Expire after 24 hours
+        redis_client.setex(f"webhook:{camera_id}", 1800, timestamp)  # Expire after 30 minutes
 
         return JsonResponse({"status": "Webhook processed successfully"}, status=200)
     except Exception as e:
