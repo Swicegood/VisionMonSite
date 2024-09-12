@@ -127,7 +127,7 @@ async def fetch_daily_descriptions():
         print(f"Error fetching daily descriptions: {str(e)}")
         return {}
     
-async def get_latest_frame(camera_id):
+def get_latest_frame(camera_id):
     conn = get_db_connection()
     if not conn:
         logger.error("Database connection failed")

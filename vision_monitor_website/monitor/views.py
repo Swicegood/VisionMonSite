@@ -133,50 +133,20 @@ def send_websocket_update(message):
         logger.error(f"Error sending WebSocket update: {str(e)}")
 
 @csrf_exempt
-async def no_show_webhook(request):
-    if request.method not in ['POST', 'GET']:
-        return HttpResponse("Method not allowed", status=405)
-
-    # Extract data from custom headers
-    camera_id = request.headers.get('X-Camera-Id')
-    start_time = request.headers.get('X-Start-Time')
-    end_time = request.headers.get('X-End-Time')
-
-    if not all([camera_id, start_time, end_time]):
-        return HttpResponse("Missing required headers", status=400)
+def no_show_webhook(request):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
-        # Get the latest frame for the camera
-        frame = await get_latest_frame(camera_id)
-        if frame is None:
-            return HttpResponse("No frame available", status=404)
+        data = json.loads(request.body)
+        camera_id = data['alarm']['triggers'][0]['device']
+        timestamp = data['timestamp']
 
-        # Convert frame to base64
-        if isinstance(frame, memoryview):
-            frame_bytes = frame.tobytes()
-        elif isinstance(frame, bytes):
-            frame_bytes = frame
-        elif isinstance(frame, str):
-            frame_bytes = frame.encode('utf-8')
-        else:
-            return HttpResponse(f"Unexpected frame type: {type(frame)}", status=500)
+        # Store this webhook hit in Redis with an expiration
+        redis_client = connect_redis()
+        redis_client.setex(f"webhook:{camera_id}", 86400, timestamp)  # Expire after 24 hours
 
-        frame_base64 = base64.b64encode(frame_bytes).decode('utf-8')
-
-        # Prepare alert data
-        alert_data = {
-            'camera_id': camera_id,
-            'check_time': f"{start_time}-{end_time}",
-            'message': f"No person detected for camera {camera_id} between {start_time} and {end_time}",
-            'frame': frame_base64
-        }
-
-        # Push to Redis ALERT_QUEUE
-        redis_client = await connect_redis()
-        await redis_client.rpush(ALERT_QUEUE, json.dumps(alert_data))
-        redis_client.close()
-        await redis_client.wait_closed()
-
-        return HttpResponse("Alert queued successfully", status=200)
+        return JsonResponse({"status": "Webhook processed successfully"}, status=200)
     except Exception as e:
-        return HttpResponse(f"Error processing webhook: {str(e)}", status=500)
+        logger.error(f"Error processing webhook: {str(e)}")
+        return JsonResponse({"error": f"Error processing webhook: {str(e)}"}, status=500)

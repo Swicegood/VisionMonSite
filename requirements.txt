@@ -44,3 +44,4 @@ aiohttp
 requests
 asyncpg
 aiocron
+asyncio
