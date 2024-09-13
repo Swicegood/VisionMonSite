@@ -72,7 +72,7 @@ async def call_openai_api(prompt):
     logger.debug("Calling OpenAI API")
     try:
         response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Changed to a definitely available model
+            model="gpt-4o-mini",  # Changed to a definitely available model
             messages=[
                 {"role": "system", "content": "You are an AI assistant tasked with summarizing daily activities at a temple."},
                 {"role": "user", "content": prompt}
