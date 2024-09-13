@@ -39,7 +39,7 @@ def check_no_shows():
     no_show_checks = {
         "sHlS7ewuGDEd2ef4": [
             ("11:55", "12:00", range(7)),
-            ("15:45", "15:55", range(0, 6)),
+            ("15:42", "15:55", range(0, 6)),
             ("18:40", "18:45", range(0, 6))
         ],
         "g8rHNVCflWO1ptKN": [
