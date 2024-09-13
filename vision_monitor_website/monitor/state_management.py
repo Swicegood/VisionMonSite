@@ -90,12 +90,16 @@ camera_alert_config = {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
+    "Prabhupada 11": {
+        "penalty": 0.5,
+        "alert_states": {"festival happening"}
+    },        
     "Stage 12": {
         "penalty": 0.4,
         "alert_states": {"bustling", "crowd gathering", "festival happening"}
     },
     "Temple 13": {
-        "penalty": 0.5,
+        "penalty": 0.4,
         "alert_states": {"festival happening"}
     },
     "Walk-in 15": {
