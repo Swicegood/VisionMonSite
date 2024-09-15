@@ -138,15 +138,28 @@ def no_show_webhook(request):
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
+        # Get camera_id from headers
+        camera_id = request.headers.get('X-Camera-Id')
+        
+        if not camera_id:
+            return JsonResponse({"error": "X-Camera-Id header is missing"}, status=400)
+
+        # Parse the timestamp from the request body
         data = json.loads(request.body)
-        camera_id = data['alarm']['triggers'][0]['device']
         timestamp = data['timestamp']
 
         # Store this webhook hit in Redis with an expiration
         redis_client = connect_redis()
         redis_client.setex(f"webhook:{camera_id}", 1800, timestamp)  # Expire after 30 minutes
 
+        logger.info(f"Processed webhook for camera {camera_id} at timestamp {timestamp}")
         return JsonResponse({"status": "Webhook processed successfully"}, status=200)
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON in request body")
+        return JsonResponse({"error": "Invalid JSON in request body"}, status=400)
+    except KeyError as e:
+        logger.error(f"Missing key in JSON data: {str(e)}")
+        return JsonResponse({"error": f"Missing key in JSON data: {str(e)}"}, status=400)
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return JsonResponse({"error": f"Error processing webhook: {str(e)}"}, status=500)
