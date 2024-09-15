@@ -38,7 +38,7 @@ def check_no_shows():
     # Days of week: 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
     no_show_checks = {
         "sHlS7ewuGDEd2ef4": [
-            ("11:55", "12:00", range(7)),
+            ("11:52", "12:00", range(7)),
             ("15:42", "15:55", range(0, 6)),
             ("18:40", "18:45", range(0, 6))
         ],
@@ -100,4 +100,4 @@ async def run_no_show_checks():
             check_no_shows()
         except Exception as e:
             logger.error(f"Error in no-show checks: {str(e)}")
-        await asyncio.sleep(60)  # Check every minute
+        await asyncio.sleep(180)  # Check every 3 minutes
