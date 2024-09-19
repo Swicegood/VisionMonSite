@@ -149,7 +149,7 @@ async def test_openai_connection():
             
 async def start_scheduled_tasks():
     # Schedule the daily summary task
-    cron = aiocron.crontab('0 20,0 * * *', func=generate_daily_summary)
+    cron = aiocron.crontab('0 0 * * *', func=generate_daily_summary)
     
     while True:
         await asyncio.sleep(3600)  # Sleep for an hour
