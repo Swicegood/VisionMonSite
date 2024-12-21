@@ -2,13 +2,14 @@
 import asyncio
 import json
 import base64
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from django.utils import timezone
 from .db_operations import get_latest_frame
 from .redis_operations import connect_redis
 from .config import ALERT_QUEUE
 import pytz
 import logging
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def convert_to_utc(t, tz_name='America/New_York'):
     local_dt = local_tz.localize(datetime.combine(today, t))
     return local_dt.astimezone(pytz.UTC).time()
 
-# Helper function to check if current time is within a specified rangedef is_time_in_range(start, end, current):
+# Helper function to check if current time is within a specified range
 def is_time_in_range(start, end, current):
     if start <= end:
         return start <= current <= end
@@ -29,7 +30,6 @@ def is_time_in_range(start, end, current):
 # Helper function to check if current day is in specified days
 def is_day_match(current_day, days):
     return current_day in days
-
 
 def check_no_shows():
     redis_client = connect_redis()
@@ -94,6 +94,7 @@ def check_no_shows():
 
     redis_client.close()
     logger.info("Completed no-show checks")
+
 async def run_no_show_checks():
     while True:
         try:
@@ -101,3 +102,72 @@ async def run_no_show_checks():
         except Exception as e:
             logger.error(f"Error in no-show checks: {str(e)}")
         await asyncio.sleep(180)  # Check every 3 minutes
+
+def cleanup_old_entries():
+    logger.info('Starting cleanup operation...')
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    
+    logger.info(f'Will delete entries older than: {thirty_days_ago}')
+    
+    try:
+        with connection.cursor() as cursor:
+            logger.info('Executing deletion query...')
+            cursor.execute("""
+                WITH old_metadata AS (
+                    SELECT id, data_id 
+                    FROM visionmon_metadata 
+                    WHERE timestamp < %s
+                ),
+                deleted_metadata AS (
+                    DELETE FROM visionmon_metadata
+                    WHERE id IN (SELECT id FROM old_metadata)
+                    RETURNING id
+                ),
+                deleted_binary_data AS (
+                    DELETE FROM visionmon_binary_data
+                    WHERE id IN (SELECT data_id FROM old_metadata)
+                    RETURNING id
+                ),
+                old_state_results AS (
+                    SELECT id
+                    FROM state_result 
+                    WHERE timestamp < %s
+                ),
+                deleted_state_results AS (
+                    DELETE FROM state_result
+                    WHERE id IN (SELECT id FROM old_state_results)
+                    RETURNING id
+                )
+                SELECT 
+                    (SELECT COUNT(*) FROM deleted_metadata) +
+                    (SELECT COUNT(*) FROM deleted_binary_data) +
+                    (SELECT COUNT(*) FROM deleted_state_results) as total_deleted;
+            """, [thirty_days_ago, thirty_days_ago])
+            
+            deleted_count = cursor.fetchone()[0]
+            logger.info(f'Successfully deleted {deleted_count} entries')
+
+    except Exception as e:
+        logger.error(f'Error during cleanup: {str(e)}')
+        # Get details about any blocking queries
+        cursor.execute("""
+            SELECT pid, state, query_start, query
+            FROM pg_stat_activity
+            WHERE state != 'idle';
+        """)
+        active_queries = cursor.fetchall()
+        logger.info('Active database queries:')
+        for query in active_queries:
+            logger.info(f'    PID: {query[0]}, State: {query[1]}, Started: {query[2]}')
+            logger.info(f'    Query: {query[3]}')
+        raise
+
+    logger.info('Cleanup operation completed')
+
+async def run_cleanup_old_entries():
+    while True:
+        try:
+            cleanup_old_entries()
+        except Exception as e:
+            logger.error(f"Error in cleanup old entries: {str(e)}")
+        await asyncio.sleep(86400)  # Run once a day

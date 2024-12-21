@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand
 from monitor.openai_operations import run_scheduler
-from monitor.scheduled_tasks import run_no_show_checks
+from monitor.scheduled_tasks import run_no_show_checks, run_cleanup_old_entries
 import threading
 import asyncio
 import logging
@@ -31,6 +31,8 @@ class Command(BaseCommand):
 
             # Run no-show checks in the main thread
             asyncio.run(run_no_show_checks())
+            # Run cleanup operation in the main thread
+            asyncio.run(run_cleanup_old_entries())
         else:
             self.stdout.write('Running in foreground mode')
             # Run scheduler in a separate thread
@@ -39,8 +41,10 @@ class Command(BaseCommand):
 
             # Run no-show checks in the main thread
             asyncio.run(run_no_show_checks())
+            # Run cleanup operation in the main thread
+            asyncio.run(run_cleanup_old_entries())
         
-        logger.info('Scheduler and no-show checks startup complete')
+        logger.info('Finished scheduler and no-show checks and cleanup operation')
 
     def run_both(self):
         # This method is used for the non-daemon mode
@@ -48,3 +52,4 @@ class Command(BaseCommand):
         scheduler_thread.start()
         
         asyncio.run(run_no_show_checks())
+        asyncio.run(run_cleanup_old_entries())
