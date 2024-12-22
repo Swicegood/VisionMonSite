@@ -22,5 +22,6 @@ urlpatterns = [
     path('get_composite_image/<str:camera_name>/', get_composite_image, name='get_composite_image'),
     path('update_state/', views.update_state, name='update_state'),
     path('webhook/no-show/', views.no_show_webhook, name='no_show_webhook'),
-    
+    path('timeline/', views.timeline_view, name='timeline')
 ]
+    

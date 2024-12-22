@@ -1,0 +1,185 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Timeline Page</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <style>
+    /* === BASIC PAGE LAYOUT === */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      color: #333;
+      overflow: hidden; /* to prevent scrolling on the outer page */
+    }
+    body {
+      display: flex;
+      flex-direction: row;
+      background-color: #f0f0f0;
+    }
+    </style>
+</head>
+<body style="display: flex; flex-direction: row; background-color: #f0f0f0; height: 100%; margin: 0; padding: 0;">
+
+  <!-- ===== LEFT PANEL: MAIN CAMERA + THUMBNAILS ===== -->
+  <div class="left-panel">
+    <!-- Main camera display -->
+    <div class="main-camera-display">
+      <img
+        id="mainCameraImage"
+        src="https://via.placeholder.com/900x500?text=Main+Camera"
+        alt="Main Camera"
+      />
+    </div>
+
+    <!-- Thumbnails (grid) -->
+    <div class="thumbnails-grid" id="thumbnailsGrid">
+      <!-- Dummy examples: replace with real camera snapshots -->
+      <div class="thumbnail" onclick="selectCamera('Walkway')">
+        <img src="https://via.placeholder.com/140x80?text=Walkway" alt="Walkway">
+        <div class="thumbnail-label">Walkway</div>
+      </div>
+      <div class="thumbnail" onclick="selectCamera('Walk-in')">
+        <img src="https://via.placeholder.com/140x80?text=Walk-in" alt="Walk-in">
+        <div class="thumbnail-label">Walk-in</div>
+      </div>
+      <div class="thumbnail" onclick="selectCamera('Up+Pujari')">
+        <img src="https://via.placeholder.com/140x80?text=Up+Pujari" alt="Up Pujari">
+        <div class="thumbnail-label">Up Pujari</div>
+      </div>
+      <div class="thumbnail" onclick="selectCamera('Temple')">
+        <img src="https://via.placeholder.com/140x80?text=Temple" alt="Temple">
+        <div class="thumbnail-label">Temple</div>
+      </div>
+      <div class="thumbnail" onclick="selectCamera('Stage')">
+        <img src="https://via.placeholder.com/140x80?text=Stage" alt="Stage">
+        <div class="thumbnail-label">Stage</div>
+      </div>
+      <!-- Add as many cameras as needed -->
+    </div>
+  </div>
+
+  <!-- ===== RIGHT PANEL: TIMELINE ===== -->
+  <div class="timeline-panel">
+    <!-- Tabs (Timeline / States) -->
+    <div class="tab-header">
+      <button class="active" onclick="showTab('timeline')">Timeline</button>
+      <button onclick="showTab('states')">States</button>
+    </div>
+
+    <!-- Zoom slider -->
+    <div class="zoom-slider-container">
+      <input
+        type="range"
+        min="1"
+        max="10"
+        value="5"
+        class="zoom-slider"
+        id="zoomSlider"
+        oninput="changeZoom(this.value)"
+      />
+    </div>
+
+    <!-- Scrollable timeline area -->
+    <div class="timeline-content" id="timelineContainer">
+      <!-- Timeline tab content -->
+      <div class="timeline-grid" id="timelineTab">
+        <!-- Example rows for demonstration. Replace with your data. -->
+        <div class="time-marker">1:00 PM</div>
+        <div class="middle-strip"></div>
+        <img
+          class="event-thumbnail"
+          src="https://via.placeholder.com/40?text=Evt"
+          alt="Event"
+        >
+
+        <div class="time-marker">12:50 PM</div>
+        <div class="middle-strip"></div>
+        <img
+          class="event-thumbnail"
+          src="https://via.placeholder.com/40?text=Evt"
+          alt="Event"
+        >
+
+        <div class="time-marker">12:40 PM</div>
+        <div class="middle-strip"></div>
+        <img
+          class="event-thumbnail"
+          src="https://via.placeholder.com/40?text=Evt"
+          alt="Event"
+        >
+
+        <div class="time-marker">12:30 PM</div>
+        <div class="middle-strip"></div>
+        <img
+          class="event-thumbnail"
+          src="https://via.placeholder.com/40?text=Evt"
+          alt="Event"
+        >
+      </div>
+
+      <!-- States tab content (hidden by default) -->
+      <div class="timeline-grid" id="statesTab" style="display: none;">
+        <!-- Example rows for demonstration. Replace with your data. -->
+        <div class="time-marker">1:00 PM</div>
+        <div class="middle-strip"></div>
+        <div class="state-indicator">Active</div>
+
+        <div class="time-marker">12:45 PM</div>
+        <div class="middle-strip"></div>
+        <div class="state-indicator">Quiet</div>
+
+        <div class="time-marker">12:30 PM</div>
+        <div class="middle-strip"></div>
+        <div class="state-indicator">Active</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*
+      In a real app, these would fetch or generate real snapshots:
+      Example: each camera might have a specific URL for its most recent image.
+    */
+    function selectCamera(cameraName) {
+      // Just demonstrating a placeholder approach:
+      // Replace this with a real dynamic URL to the camera’s most recent snapshot
+      document.getElementById('mainCameraImage').src =
+        'https://via.placeholder.com/900x500?text=' + encodeURIComponent(cameraName);
+    }
+
+    // Tab switching
+    function showTab(tabName) {
+      // Remove active class from both tab buttons
+      const buttons = document.querySelectorAll('.tab-header button');
+      buttons.forEach(btn => btn.classList.remove('active'));
+
+      // Hide both content grids
+      document.getElementById('timelineTab').style.display = 'none';
+      document.getElementById('statesTab').style.display = 'none';
+
+      // Show the selected tab
+      if (tabName === 'timeline') {
+        document.getElementById('timelineTab').style.display = 'grid';
+        buttons[0].classList.add('active');
+      } else {
+        document.getElementById('statesTab').style.display = 'grid';
+        buttons[1].classList.add('active');
+      }
+    }
+
+    // Zoom slider
+    function changeZoom(value) {
+      // Example: Adjust the vertical spacing in the timeline
+      const timelineGrids = document.querySelectorAll('.timeline-grid');
+      timelineGrids.forEach(grid => {
+        grid.style.rowGap = (20 * value / 5) + 'px'; 
+      });
+    }
+  </script>
+</body>
+</html>

@@ -67,6 +67,10 @@ def monitor(request):
         'composite_images': composite_images
     })
 
+def timeline_view(request):
+    cameras = fetch_latest_frame_analyses()
+    return render(request, 'monitor/timeline.html')
+
 def test_websocket(request):
     logger.info("test_websocket view called")
     channel_layer = get_channel_layer()
