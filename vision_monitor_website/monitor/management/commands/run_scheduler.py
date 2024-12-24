@@ -29,20 +29,18 @@ class Command(BaseCommand):
             scheduler_thread.daemon = True
             scheduler_thread.start()
 
-            # Run no-show checks in the main thread
-            asyncio.run(run_no_show_checks())
-            # Run cleanup operation in the main thread
-            asyncio.run(run_cleanup_old_entries())
+            # Run no-show checks in a thread
+            # Run cleanup operation in a thread
+            asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))
         else:
             self.stdout.write('Running in foreground mode')
             # Run scheduler in a separate thread
             scheduler_thread = threading.Thread(target=run_scheduler)
             scheduler_thread.start()
 
-            # Run no-show checks in the main thread
-            asyncio.run(run_no_show_checks())
-            # Run cleanup operation in the main thread
-            asyncio.run(run_cleanup_old_entries())
+            # Run no-show checks in a thread
+            # Run cleanup operation in a thread
+            asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))
         
         logger.info('Finished scheduler and no-show checks and cleanup operation')
 
@@ -51,5 +49,6 @@ class Command(BaseCommand):
         scheduler_thread = threading.Thread(target=run_scheduler)
         scheduler_thread.start()
         
-        asyncio.run(run_no_show_checks())
-        asyncio.run(run_cleanup_old_entries())
+        # Run no-show checks in a thread
+        # Run cleanup operation in a thread
+        asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))

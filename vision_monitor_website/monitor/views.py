@@ -74,12 +74,12 @@ def timeline_view(request):
             {
                 'id': analysis[0],
                 'name': analysis[4],
-                'image': f'get_latest_image/{analysis[1]}' if get_latest_frame(analysis[0]) else '',
+                'image': f'/get_latest_image/{analysis[1]}' if get_latest_frame(analysis[0]) else '',
                 'index': analysis[1],
             } for analysis in latest_analyses
         ],
     }
-    return render(request, 'monitor/timeline.html', {'initial_data': json.dumps(initial_data)})
+    return render(request, 'monitor/timeline.html', {'initial_data': initial_data})
 
 def test_websocket(request):
     logger.info("test_websocket view called")
