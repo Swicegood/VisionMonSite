@@ -1,4 +1,6 @@
 import { handleStructuredMessage, handleUnstructuredMessage, handleAlertMessage } from './messageHandlers.js';
+import { updateTimelinePage } from './uIUpdates.js'; // A new function to update the timeline
+
 
 let socket;
 
@@ -12,6 +14,8 @@ export function initializeWebSocket() {
                 const parsedData = JSON.parse(data.message);
                 if (parsedData.type === "alert") {
                     handleAlertMessage(parsedData);
+                } else if (parsedData.type === "timeline") {
+                    updateTimelinePage(parsedData);
                 } else if (parsedData.message) {
                     const innerData = JSON.parse(parsedData.message);
                     handleStructuredMessage(innerData);

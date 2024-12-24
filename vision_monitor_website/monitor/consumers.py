@@ -16,20 +16,30 @@ class LLMOutputConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-        logger.debug(f"Received message from WebSocket: {message}")
+        message_type = text_data_json.get('type', 'default')
+        message = text_data_json.get('message', '')
         
+        logger.debug(f"Received message of type '{message_type}' from WebSocket: {message}")
+        
+        # Broadcast message to all connected clients
         await self.channel_layer.group_send(
             "llm_output",
             {
                 "type": "send_message",
+                "message_type": message_type,
                 "message": message
             }
         )
 
     async def send_message(self, event):
+        message_type = event.get('message_type', 'default')
         message = event['message']
-        await self.send(text_data=json.dumps({
+
+        # Structure the outgoing message
+        outgoing_message = {
+            'type': message_type,
             'message': message
-        }))
-        logger.debug(f"Sent message to WebSocket: {message}")
+        }
+
+        await self.send(text_data=json.dumps(outgoing_message))
+        logger.debug(f"Sent message of type '{message_type}' to WebSocket: {message}")

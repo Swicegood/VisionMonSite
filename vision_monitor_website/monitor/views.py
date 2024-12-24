@@ -68,8 +68,18 @@ def monitor(request):
     })
 
 def timeline_view(request):
-    cameras = fetch_latest_frame_analyses()
-    return render(request, 'monitor/timeline.html')
+    latest_analyses = fetch_latest_frame_analyses()
+    initial_data = {
+        'cameras': [
+            {
+                'id': analysis[0],
+                'name': analysis[4],
+                'image': f'get_latest_image/{analysis[1]}' if get_latest_frame(analysis[0]) else '',
+                'index': analysis[1],
+            } for analysis in latest_analyses
+        ],
+    }
+    return render(request, 'monitor/timeline.html', {'initial_data': json.dumps(initial_data)})
 
 def test_websocket(request):
     logger.info("test_websocket view called")

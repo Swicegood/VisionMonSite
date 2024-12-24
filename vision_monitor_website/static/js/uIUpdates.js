@@ -1,5 +1,6 @@
 import { cameraMap } from './stateManagement.js';
 import { getLatestImageUrl, getCompositeImageUrl, colorCodeState } from './utils.js';
+import logger from './logger.js';
 
 const cameraFeeds = document.getElementById('camera-feeds');
 const llmOutput = document.getElementById('llm-output');
@@ -204,4 +205,68 @@ function colorCodeAlertStatus(element, status) {
 // Call this function after updating the DOM
 export function initializeModalListeners() {
     setupModalListeners();
+}
+
+export function initializeTimelinePage(initialData) {
+    logger.debug("Initializing timeline page with ",initialData);
+    if (initialData && initialData.cameras) {
+        const thumbnailsGrid = document.getElementById('thumbnailsGrid');
+        thumbnailsGrid.innerHTML = ''; // Clear current thumbnails
+
+        initialData.cameras.forEach(camera => {
+            logger.debug("Initializing page with ",camera);
+            const cameraName = camera.id.split(' ')[0];
+            const thumbnail = document.createElement('div');
+            thumbnail.className = 'thumbnail';
+            thumbnail.innerHTML = `
+                <img src="${camera.image}" alt="${cameraName}">
+                <div class="thumbnail-label">${cameraName}</div>
+            `;
+            thumbnail.onclick = () => selectCamera(cameraName);
+            thumbnailsGrid.appendChild(thumbnail);
+        });
+    }
+}
+
+
+export function updateTimelinePage(data) {
+    if (data.cameras) {
+        const thumbnailsGrid = document.getElementById('thumbnailsGrid');
+        const timelineContainer = document.getElementById('timelineContainer');
+
+        // Update thumbnails
+        if (thumbnailsGrid) {
+            thumbnailsGrid.innerHTML = ''; // Clear current thumbnails
+            data.cameras.forEach(camera => {
+                const cameraName = camera.id.split(' ')[0];
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'thumbnail';
+                thumbnail.innerHTML = `
+                    <img src="${camera.image}" alt="${cameraName}">
+                    <div class="thumbnail-label">${cameraName}</div>
+                `;
+                thumbnail.onclick = () => selectCamera(cameraName);
+                thumbnailsGrid.appendChild(thumbnail);
+            });
+        }
+
+        // Update timeline content
+        if (timelineContainer) {
+            timelineContainer.innerHTML = ''; // Clear current timeline
+            data.events.forEach(event => {
+                const timelineRow = document.createElement('div');
+                timelineRow.className = 'timeline-row';
+                timelineRow.innerHTML = `
+                    <div class="time-marker">${event.time}</div>
+                    <div class="middle-strip"></div>
+                    <img
+                        class="event-thumbnail"
+                        src="${event.image}"
+                        alt="Event"
+                    >
+                `;
+                timelineContainer.appendChild(timelineRow);
+            });
+        }
+    }
 }
