@@ -1,5 +1,3 @@
-# monitor/management/commands/run_scheduler.py
-
 from django.core.management.base import BaseCommand
 from monitor.openai_operations import run_scheduler
 from monitor.scheduled_tasks import run_no_show_checks, run_cleanup_old_entries
@@ -19,6 +17,10 @@ class Command(BaseCommand):
             help='Run as a daemon process',
         )
 
+    async def run_tasks(self):
+        # Gather both tasks to run concurrently
+        await asyncio.gather(run_no_show_checks(), run_cleanup_old_entries())
+
     def handle(self, *args, **options):
         logger.info('Starting scheduler and no-show checks...')
         
@@ -29,21 +31,18 @@ class Command(BaseCommand):
             scheduler_thread.daemon = True
             scheduler_thread.start()
 
-            # Run no-show checks in a thread
-            # Run cleanup operation in a thread
-            asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))
+            # Use asyncio.run with a properly wrapped coroutine
+            asyncio.run(self.run_tasks())
         else:
             self.stdout.write('Running in foreground mode')
             # Run scheduler in a separate thread
             scheduler_thread = threading.Thread(target=run_scheduler)
             scheduler_thread.start()
 
-            # Run no-show checks in a thread
-            # Run cleanup operation in a thread
-            asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))
+            # Use asyncio.run with a properly wrapped coroutine
+            asyncio.run(self.run_tasks())
         
         logger.info('Finished scheduler and no-show checks and cleanup operation')
-
     def run_both(self):
         # This method is used for the non-daemon mode
         scheduler_thread = threading.Thread(target=run_scheduler)
@@ -51,4 +50,4 @@ class Command(BaseCommand):
         
         # Run no-show checks in a thread
         # Run cleanup operation in a thread
-        asyncio.run(asyncio.gather(run_no_show_checks(), run_cleanup_old_entries()))
+        asyncio.run(self.run_tasks())
