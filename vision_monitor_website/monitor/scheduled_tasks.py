@@ -10,6 +10,7 @@ from .config import ALERT_QUEUE
 import pytz
 import logging
 from django.db import connection
+from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +168,8 @@ def cleanup_old_entries():
 async def run_cleanup_old_entries():
     while True:
         try:
-            cleanup_old_entries()
+            # Wrap the synchronous cleanup_old_entries in sync_to_async
+            await sync_to_async(cleanup_old_entries)()
         except Exception as e:
             logger.error(f"Error in cleanup old entries: {str(e)}")
         await asyncio.sleep(86400)  # Run once a day
