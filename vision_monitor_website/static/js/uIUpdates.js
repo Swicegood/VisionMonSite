@@ -278,7 +278,7 @@ export function updateTimelinePage(data) {
                     </div>
                     <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
                     <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
-                    <i class="fas fa-user" style="font-size: 16px;" title="Person Detection"></i>
+                    <i class="fas fa-wind" style="font-size: 16px;" title="Person Detection"></i>
                     <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                     </div>
                     <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
