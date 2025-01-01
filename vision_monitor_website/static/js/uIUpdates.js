@@ -282,7 +282,7 @@ export function updateTimelinePage(data) {
                     <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                     </div>
                     <div class="event-type-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
-                        <i class="fas fa-running" style="font-size: 16px;" title="Motion Detection"></i>
+                        ${getStateIcon(event.state)}
                         <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                     </div>
                     <img
@@ -377,4 +377,24 @@ export function selectCamera(cameraIndex, cameraId) {
                 errorStack: error.stack
             });
         });
+}
+
+export function getStateIcon(state) {
+    const lowerState = state.toLowerCase();
+    if (lowerState.includes('bustling')) {
+        return '<i class="fas fa-users" title="Bustling"></i>';
+    } else if (lowerState.includes('night-time')) {
+        return '<i class="fas fa-moon" title="Night-time"></i>';
+    } else if (lowerState.includes('festival happening') || lowerState.includes('crowd gathering')) {
+        return '<i class="fas fa-star" title="Festival/Crowd"></i>';
+    } else if (lowerState.includes('quiet')) {
+        return '<i class="fas fa-volume-mute" title="Quiet"></i>';
+    } else if (lowerState.includes('person')) {
+        return '<i class="fas fa-walking" title="Person Present"></i>';
+    } else if (lowerState.includes('eating')) {
+        return '<i class="fas fa-utensils" title="People Eating"></i>';
+    } else if (lowerState.includes('door open')) {
+        return '<i class="fas fa-door-open" title="Door Open"></i>';
+    }
+    return '<i class="fas fa-camera" title="Default State"></i>';
 }

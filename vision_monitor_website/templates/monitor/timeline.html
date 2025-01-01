@@ -84,7 +84,7 @@
     </div>
 
     <script type="module">
-        import { selectCamera } from "{% static 'js/uIUpdates.js' %}";
+        import { selectCamera, getStateIcon } from "{% static 'js/uIUpdates.js' %}";
         import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
         import logger from "{% static 'js/logger.js' %}";
         // Tab switching
@@ -149,7 +149,7 @@
 
                     // Log the incoming timestamp for debugging
                     const time = formatTimestamp(event.timestamp);
-
+                    const imageUrl = `/get_frame_image/${event.data_id}`;
                     timelineRow.innerHTML = `
                         <div class="timeline-row" >
                             <div class="time-marker">${time}</div>
@@ -162,15 +162,20 @@
                                 <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                             </div>
                             <div class="event-type-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
-                                <i class="fas fa-running" style="font-size: 16px;" title="Motion Detection"></i>
+                                ${getStateIcon(event.state)}
                                 <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                             </div>
                             <div class="event-thumbnail" style="display: flex; align-items: center; gap: 5px;">
-                                <img src="/get_frame_image/${event.data_id}/" alt="Event at ${time}" style="max-width: 60px; max-height: 60px;" class="timeline-image" onclick="showFullImage(this.src)">
+                                <img src="${imageUrl}" alt="Event at ${time}" 
+                                    style="max-width: 60px; max-height: 60px;" 
+                                    class="timeline-image" ">
                             </div>
                         </div>
                     `;
-
+                    timelineRow.onclick = () => {
+                    const mainCameraImage = document.getElementById('mainCameraImage');
+                    mainCameraImage.src = imageUrl;
+                    }
                     timelineGrid.appendChild(timelineRow);
                 });
             }

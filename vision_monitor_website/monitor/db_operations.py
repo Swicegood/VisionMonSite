@@ -4,6 +4,7 @@ import asyncpg
 from django.conf import settings
 from psycopg2.extras import DictCursor
 from django.utils import timezone
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -158,16 +159,23 @@ def fetch_timeline_events(start_time, end_time, camera_id=None):
         with conn.cursor(cursor_factory=DictCursor) as cur:
             query = """
             SELECT 
-                camera_id,
-                camera_name,
-                timestamp,
-                data_id,
-                COALESCE(description, 'No description available') as description
-            FROM visionmon_metadata
-            WHERE timestamp BETWEEN %s AND %s
+                vm.camera_id,
+                vm.camera_name,
+                vm.timestamp,
+                vm.data_id,
+                COALESCE(vm.description, 'No description available') as description,
+                (
+                    SELECT raw_message
+                    FROM state_result sr
+                    WHERE sr.timestamp <= vm.timestamp
+                    ORDER BY sr.timestamp DESC
+                    LIMIT 1
+                ) as state_data
+            FROM visionmon_metadata vm
+            WHERE vm.timestamp BETWEEN %s AND %s
             """
             if camera_id:
-                query += " AND camera_id = %s"
+                query += " AND vm.camera_id = %s"
                 cur.execute(query, (start_time, end_time, camera_id))
             else:
                 cur.execute(query, (start_time, end_time))
@@ -176,27 +184,33 @@ def fetch_timeline_events(start_time, end_time, camera_id=None):
             
             formatted_results = []
             for row in results:
-                # Ensure timestamp is properly formatted
                 timestamp = row['timestamp']
-                if timestamp:
-                    formatted_timestamp = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
-                else:
-                    formatted_timestamp = None
+                formatted_timestamp = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f%z') if timestamp else None
                 
+                # Parse the state data JSON to get camera states
+                state_data = json.loads(row['state_data']) if row['state_data'] else {}
+                camera_states = state_data.get('camera_states', {})
+                # Match camera name ignoring the number suffix
+                camera_state = ''
+                source_name = str(row['camera_name']).split(' ')[0]  # Get name part without number
+                for target_name, state in camera_states.items():
+                    target_base = target_name.split(' ')[0]  # Get base name without number
+                    if source_name == target_base:
+                        camera_state = state
+                        break
+                print(f"Camera state: {camera_state}")
                 formatted_results.append({
                     'camera_id': row['camera_id'],
                     'camera_name': row['camera_name'],
                     'timestamp': formatted_timestamp,
                     'data_id': row['data_id'],
-                    'description': row['description']
+                    'description': row['description'],
+                    'state': camera_state
                 })
-            # reverse the results
+            
             formatted_results.reverse()
-            # Log a sample result for debugging
-            if formatted_results:
-                logger.debug(f"Sample timeline event: {formatted_results[0]}")
-                
             return formatted_results
+            
     except Exception as e:
         logger.error(f"Error fetching timeline events: {str(e)}")
         return []
