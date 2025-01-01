@@ -147,3 +147,75 @@ def get_latest_frame(camera_id):
     except Exception as e:
         print(f"Error fetching latest frame for camera {camera_id}: {str(e)}")
         return None
+
+def fetch_timeline_events(start_time, end_time, camera_id=None):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Database connection failed")
+            return []
+            
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            query = """
+            SELECT 
+                camera_id,
+                camera_name,
+                timestamp,
+                data_id,
+                COALESCE(description, 'No description available') as description
+            FROM visionmon_metadata
+            WHERE timestamp BETWEEN %s AND %s
+            """
+            if camera_id:
+                query += " AND camera_id = %s"
+                cur.execute(query, (start_time, end_time, camera_id))
+            else:
+                cur.execute(query, (start_time, end_time))
+            
+            results = cur.fetchall()
+            
+            formatted_results = []
+            for row in results:
+                # Ensure timestamp is properly formatted
+                timestamp = row['timestamp']
+                if timestamp:
+                    formatted_timestamp = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+                else:
+                    formatted_timestamp = None
+                
+                formatted_results.append({
+                    'camera_id': row['camera_id'],
+                    'camera_name': row['camera_name'],
+                    'timestamp': formatted_timestamp,
+                    'data_id': row['data_id'],
+                    'description': row['description']
+                })
+            # reverse the results
+            formatted_results.reverse()
+            # Log a sample result for debugging
+            if formatted_results:
+                logger.debug(f"Sample timeline event: {formatted_results[0]}")
+                
+            return formatted_results
+    except Exception as e:
+        logger.error(f"Error fetching timeline events: {str(e)}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+            
+def get_frame_image_from_db(data_id):
+    conn = get_db_connection()
+    if not conn:
+        logger.error("Database connection failed")
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT data FROM visionmon_binary_data WHERE id = %s", (data_id,))
+            result = cur.fetchone()
+            return result[0] if result else None
+    except Exception as e:
+        logger.error(f"Error fetching frame image: {str(e)}")
+        return None
+    finally:
+        conn.close()

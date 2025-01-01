@@ -5,7 +5,7 @@ from django.conf import settings
 import os
 
 from . import views
-from .image_handling import get_latest_image, get_composite_image
+from .image_handling import get_latest_image, get_composite_image, get_frame_image
 from .notifications import test_notification
 
 def serve_favicon(request):
@@ -19,9 +19,12 @@ urlpatterns = [
     path('test-notification/', views.test_notification_view, name='test_notification'),
     path('favicon.ico', serve_favicon),
     path('get_latest_image/<int:camera_index>/', get_latest_image, name='get_latest_image'),
+    path('get_frame_image/<int:data_id>/', get_frame_image, name='get_frame_image'),
     path('get_composite_image/<str:camera_name>/', get_composite_image, name='get_composite_image'),
     path('update_state/', views.update_state, name='update_state'),
     path('webhook/no-show/', views.no_show_webhook, name='no_show_webhook'),
-    path('timeline/', views.timeline_view, name='timeline')
+    path('timeline/', views.timeline_view, name='timeline'),
+    path('get_timeline_events/<str:camera_id>/', views.get_timeline_events, name='get_timeline_events'),
+    path('get_latest_frame_analyses/', views.get_latest_frame_analyses, name='get_latest_frame_analyses'),
 ]
     

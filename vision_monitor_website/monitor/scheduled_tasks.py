@@ -150,17 +150,20 @@ def cleanup_old_entries():
 
     except Exception as e:
         logger.error(f'Error during cleanup: {str(e)}')
-        # Get details about any blocking queries
-        cursor.execute("""
-            SELECT pid, state, query_start, query
-            FROM pg_stat_activity
-            WHERE state != 'idle';
-        """)
-        active_queries = cursor.fetchall()
-        logger.info('Active database queries:')
-        for query in active_queries:
-            logger.info(f'    PID: {query[0]}, State: {query[1]}, Started: {query[2]}')
-            logger.info(f'    Query: {query[3]}')
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pid, state, query_start, query
+                    FROM pg_stat_activity
+                    WHERE state != 'idle';
+                """)
+                active_queries = cursor.fetchall()
+                logger.info('Active database queries:')
+                for query in active_queries:
+                    logger.info(f'    PID: {query[0]}, State: {query[1]}, Started: {query[2]}')
+                    logger.info(f'    Query: {query[3]}')
+        except Exception as db_error:
+            logger.error(f"Failed to fetch active queries: {db_error}")
         raise
 
     logger.info('Cleanup operation completed')

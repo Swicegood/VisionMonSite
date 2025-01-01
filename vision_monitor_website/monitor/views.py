@@ -7,8 +7,9 @@ from django.utils import timezone
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import json
+from datetime import timedelta
 
-from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analyses, fetch_recent_llm_outputs, insert_facility_status
+from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analyses, fetch_recent_llm_outputs, insert_facility_status, fetch_timeline_events
 from .state_management import parse_facility_state
 from .image_handling import get_composite_images
 from .notifications import notify, test_notification
@@ -68,7 +69,12 @@ def monitor(request):
     })
 
 def timeline_view(request):
+    end_time = timezone.now()
+    start_time = end_time - timedelta(hours=3)  # Show last 3 hours
+    
     latest_analyses = fetch_latest_frame_analyses()
+    events = fetch_timeline_events(start_time, end_time, camera_id=None)
+    
     initial_data = {
         'cameras': [
             {
@@ -78,6 +84,7 @@ def timeline_view(request):
                 'index': analysis[1],
             } for analysis in latest_analyses
         ],
+        'events': events
     }
     return render(request, 'monitor/timeline.html', {'initial_data': initial_data})
 
@@ -177,3 +184,15 @@ def no_show_webhook(request):
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return JsonResponse({"error": f"Error processing webhook: {str(e)}"}, status=500)
+    
+@require_http_methods(["GET"])
+def get_timeline_events(request, camera_id):
+    start_time = timezone.now() - timedelta(hours=3)
+    end_time = timezone.now()
+    events = fetch_timeline_events(start_time, end_time, camera_id)
+    return JsonResponse({"events": events})
+
+@require_http_methods(["GET"])
+def get_latest_frame_analyses(request):
+    latest_analyses = fetch_latest_frame_analyses()
+    return JsonResponse({"latest_analyses": latest_analyses})

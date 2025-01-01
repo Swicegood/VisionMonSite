@@ -38,17 +38,17 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
         console.error('Camera feeds container not found');
         return;
     }
-    
+
     cameraFeeds.innerHTML = '';
-    
+
     [...cameraMap.values()].forEach((camera) => {
         const feedDiv = document.createElement('div');
         feedDiv.className = 'camera-feed';
         const imageUrl = getLatestImageUrl(camera.cameraIndex);
-        const truncatedDescription = camera.description.length > 150 
-        ? camera.description.substring(0, 150) + '...' 
-        : camera.description;
-        
+        const truncatedDescription = camera.description.length > 150
+            ? camera.description.substring(0, 150) + '...'
+            : camera.description;
+
         feedDiv.id = `camera-${camera.cameraIndex}`;
         feedDiv.innerHTML = `
             <img src="${imageUrl}" alt="Camera ${camera.cameraIndex}" class="camera-image img-fluid" 
@@ -59,11 +59,11 @@ export function updateCameraFeeds(cameraStates, cameraMap) {
             <div class="camera-description" data-bs-toggle="modal" data-bs-target="#textModal" 
                 data-camera-index="${camera.cameraIndex}">${truncatedDescription}</div>
         `;
-        
+
         if (cameraStates && cameraStates[camera.cameraName]) {
             colorCodeState(feedDiv, cameraStates[camera.cameraName]);
         }
-        
+
         cameraFeeds.appendChild(feedDiv);
     });
 }
@@ -98,9 +98,9 @@ export function updateSingleCamera(camera) {
         const imageElement = cameraElement.querySelector('.camera-image');
         const timestampElement = cameraElement.querySelector('.camera-timestamp');
         const descriptionElement = cameraElement.querySelector('.camera-description');
-        const truncatedDescription = camera.description.length > 150 
-        ? camera.description.substring(0, 150) + '...' 
-        : camera.description;
+        const truncatedDescription = camera.description.length > 150
+            ? camera.description.substring(0, 150) + '...'
+            : camera.description;
 
         if (imageElement) {
             imageElement.src = getLatestImageUrl(camera.cameraIndex);
@@ -208,13 +208,13 @@ export function initializeModalListeners() {
 }
 
 export function initializeTimelinePage(initialData) {
-    logger.debug("Initializing timeline page with ",initialData);
+    logger.debug("Initializing timeline page with ", initialData);
     if (initialData && initialData.cameras) {
         const thumbnailsGrid = document.getElementById('thumbnailsGrid');
         thumbnailsGrid.innerHTML = ''; // Clear current thumbnails
 
         initialData.cameras.forEach(camera => {
-            logger.debug("Initializing page with ",camera);
+            logger.debug("Initializing page with ", camera);
             const cameraName = camera.id.split(' ')[0];
             const thumbnail = document.createElement('div');
             thumbnail.className = 'thumbnail';
@@ -228,24 +228,34 @@ export function initializeTimelinePage(initialData) {
     }
 }
 
-
 export function updateTimelinePage(data) {
+    console.log('Updating timeline page with data:', data);
+
     if (data.cameras) {
         const thumbnailsGrid = document.getElementById('thumbnailsGrid');
         const timelineContainer = document.getElementById('timelineContainer');
 
+        logger.debug('Found DOM elements:', {
+            thumbnailsGrid: !!thumbnailsGrid,
+            timelineContainer: !!timelineContainer
+        });
+
         // Update thumbnails
         if (thumbnailsGrid) {
             thumbnailsGrid.innerHTML = ''; // Clear current thumbnails
+            logger.debug('Updating thumbnails for cameras:', data.cameras);
+
             data.cameras.forEach(camera => {
-                const cameraName = camera.id.split(' ')[0];
+                const cameraName = camera.name
+                logger.debug('Creating thumbnail for camera:', cameraName);
+
                 const thumbnail = document.createElement('div');
                 thumbnail.className = 'thumbnail';
                 thumbnail.innerHTML = `
                     <img src="${camera.image}" alt="${cameraName}">
                     <div class="thumbnail-label">${cameraName}</div>
                 `;
-                thumbnail.onclick = () => selectCamera(cameraName);
+                thumbnail.onclick = () => selectCamera(camera.index, camera.id);
                 thumbnailsGrid.appendChild(thumbnail);
             });
         }
@@ -253,20 +263,118 @@ export function updateTimelinePage(data) {
         // Update timeline content
         if (timelineContainer) {
             timelineContainer.innerHTML = ''; // Clear current timeline
-            data.events.forEach(event => {
+            logger.debug('Updating timeline events:', data.events?.length || 0);
+
+            data.events.forEach((event, index) => {
+                logger.debug(`Processing timeline event ${index}:`, event);
+
                 const timelineRow = document.createElement('div');
                 timelineRow.className = 'timeline-row';
+                const imageUrl = `/get_frame_image/${event.data_id}`;
                 timelineRow.innerHTML = `
-                    <div class="time-marker">${event.time}</div>
-                    <div class="middle-strip"></div>
+                    <div class="time-marker">${formatTimestamp(event.timestamp)}</div>
+                    <div class="middle-strip">
+                        <div class="event-bubble"></div>
+                    </div>
+                    <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
+                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                    <i class="fas fa-user" style="font-size: 16px;" title="Person Detection"></i>
+                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                    </div>
+                    <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
+                        <i class="fas fa-running" style="font-size: 16px;" title="Motion Detection"></i>
+                        <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                    </div>
                     <img
                         class="event-thumbnail"
-                        src="${event.image}"
+                        src="${imageUrl}"
                         alt="Event"
                     >
                 `;
+                // Add click handler to both row and image
+                timelineRow.onclick = () => {
+                    const mainCameraImage = document.getElementById('mainCameraImage');
+                    mainCameraImage.src = imageUrl;
+                };
                 timelineContainer.appendChild(timelineRow);
             });
         }
+    } else {
+        logger.warn('No camera data provided for timeline update');
     }
+}
+
+// ... existing code ...
+
+function formatTimestamp(timestamp) {
+    try {
+        // Parse the ISO string directly
+        const date = new Date(timestamp);
+
+        if (isNaN(date.getTime())) {
+            console.error('Invalid timestamp:', timestamp);
+            return 'Invalid Date';
+        }
+
+        return date.toLocaleString('en-US', {
+            timeZone: 'America/New_York',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch (error) {
+        console.error('Error formatting timestamp:', error);
+        return 'Invalid Date';
+    }
+}
+
+// Main camera selection
+export function selectCamera(cameraIndex, cameraId) {
+    logger.debug(`Selecting camera with index ${cameraIndex} and ID ${cameraId}`);
+
+    const mainCameraImage = document.getElementById('mainCameraImage');
+    const imageUrl = `/get_latest_image/${cameraIndex}`;
+    logger.debug(`Setting main camera image src to: ${imageUrl}`);
+    mainCameraImage.src = imageUrl;
+
+    // Fetch both timeline events and latest frame analyses
+    const timelineUrl = `/get_timeline_events/${cameraId}`;
+    const analysesUrl = '/get_latest_frame_analyses/';
+    logger.debug(`Fetching timeline events from: ${timelineUrl}`);
+    logger.debug(`Fetching latest analyses from: ${analysesUrl}`);
+
+    // Use Promise.all to fetch both in parallel
+    const [timelinePromise, analysesPromise] = [
+        fetch(timelineUrl),
+        fetch(analysesUrl)
+    ];
+
+    Promise.all([timelinePromise, analysesPromise])
+        .then(responses => {
+            logger.debug(`Timeline API response status: ${responses[0].status}`);
+            logger.debug(`Analyses API response status: ${responses[1].status}`);
+            return Promise.all(responses.map(r => r.json()));
+        })
+        .then(([timelineData, analysesData]) => {
+            logger.debug('Received timeline and analyses data');
+            const combinedData = {
+                cameras: analysesData.latest_analyses.map(analysis => ({
+                    id: analysis[0],
+                    name: analysis[4],
+                    image: `/get_latest_image/${analysis[1]}`,
+                    index: analysis[1]
+                })),
+                events: timelineData.events
+            };
+            updateTimelinePage(combinedData);
+        })
+        .catch(error => {
+            logger.error('Error fetching data:', error);
+            logger.error('Error details:', {
+                cameraIndex,
+                cameraId,
+                errorMessage: error.message,
+                errorStack: error.stack
+            });
+        });
 }

@@ -375,9 +375,8 @@ body {
 
 .timeline-grid {
     display: grid;
-    grid-template-columns: 60px 1fr 80px;
+    grid-template-columns: 1fr;
     row-gap: 20px;
-    align-items: center;
 }
 
 .time-marker {
@@ -385,14 +384,6 @@ body {
     color: #666;
     text-align: right;
     padding-right: 5px;
-}
-
-.middle-strip {
-    height: 32px;
-    border: 1px solid #ddd;
-    margin: 0 6px;
-    background: linear-gradient(90deg, #f6f6f6 0%, #fff 100%);
-    position: relative;
 }
 
 .event-thumbnail {
@@ -420,4 +411,65 @@ body {
 
 .timeline-content::-webkit-scrollbar-thumb {
     background: #ccc;
+    display: flex;
+    flex-direction: row;
+}
+
+.timeline-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px;
+    align-items: center;
+    margin-bottom: -10px;
+    display: flex; 
+    justify-content: space-between;
+}
+
+.timeline-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.timeline-image:hover {
+    transform: scale(1.1);
+}
+
+.time-marker {
+    flex:none;
+    font-size: 0.9rem;
+    color: #d3d3d3;
+    text-align: right;
+    padding-right: 25px;
+}
+
+.middle-strip {
+    height: 80px;
+    background-color: #ddd;
+    position: relative;
+    padding-right: 10px;
+}
+
+.middle-strip::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: #666;
+    border-radius: 50%;
+}
+
+.event-bubble {
+    background-color: #add8e6;
+    width: 10px;
+    height: 10px;
+    position: absolute;
+    left: 0;
+    margin-top: 35px;
+    border-radius: 50%;
 }

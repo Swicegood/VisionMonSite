@@ -7,6 +7,7 @@
     <meta charset="UTF-8">
     <title>Camera Timeline Page</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* === BASIC PAGE LAYOUT === */
         html,
@@ -23,6 +24,12 @@
             display: flex;
             flex-direction: row;
             background-color: #f0f0f0;
+        }
+
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            row-gap: 20px;
         }
     </style>
 </head>
@@ -76,7 +83,10 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { selectCamera } from "{% static 'js/uIUpdates.js' %}";
+        import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
+        import logger from "{% static 'js/logger.js' %}";
         // Tab switching
         function showTab(tabName) {
             const buttons = document.querySelectorAll('.tab-header button');
@@ -108,7 +118,7 @@
             cameras.forEach(camera => {
                 const thumbnailDiv = document.createElement('div');
                 thumbnailDiv.className = 'thumbnail';
-                thumbnailDiv.onclick = () => selectCamera(camera.index);
+                thumbnailDiv.onclick = () => selectCamera(camera.index, camera.id);
 
                 thumbnailDiv.innerHTML = `
                     <img src="${camera.image}" alt="${camera.name}">
@@ -118,23 +128,93 @@
             });
         }
 
-        // Main camera selection
-        function selectCamera(cameraIndex) {
-            document.getElementById('mainCameraImage').src =
-                `/get_latest_image/${cameraIndex}`;
-        }
+
 
         // Initialize timeline and states from initial data
         function initializeTimelineAndStates(data) {
-            console.debug('Initializing timeline and states with data:', data);
-            // Populate timeline and states here
-            // Example: Add event thumbnails or state indicators
-        }
-    </script>
+            const timelineGrid = document.getElementById('timelineTab');
+            const statesGrid = document.getElementById('statesTab');
+            timelineGrid.innerHTML = '';
+            statesGrid.innerHTML = '';
 
-    <script type="module">
-        import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
-        import logger from "{% static 'js/logger.js' %}";
+            if (data.events) {
+                data.events.forEach(event => {
+                    const timelineRow = document.createElement('div');
+                    timelineRow.className = 'timeline-row';
+
+                    if (!event || !event.timestamp) {
+                        console.error('Invalid event data:', event);
+                        return null;
+                    }
+
+                    // Log the incoming timestamp for debugging
+                    const time = formatTimestamp(event.timestamp);
+
+                    timelineRow.innerHTML = `
+                        <div class="timeline-row" >
+                            <div class="time-marker">${time}</div>
+                            <div class="middle-strip" >
+                                <div class="event-bubble"></div>
+                            </div>
+                            <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
+                                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                                <i class="fas fa-user" style="font-size: 16px;" title="Person Detection"></i>
+                                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                            </div>
+                            <div class="event-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
+                                <i class="fas fa-running" style="font-size: 16px;" title="Motion Detection"></i>
+                                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                            </div>
+                            <div class="event-thumbnail" style="display: flex; align-items: center; gap: 5px;">
+                                <img src="/get_frame_image/${event.data_id}/" alt="Event at ${time}" style="max-width: 60px; max-height: 60px;" class="timeline-image" onclick="showFullImage(this.src)">
+                            </div>
+                        </div>
+                    `;
+
+                    timelineGrid.appendChild(timelineRow);
+                });
+            }
+        }
+
+        function showFullImage(src) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <img src="${src}" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            new bootstrap.Modal(modal).show();
+            modal.addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
+
+        function formatTimestamp(timestamp) {
+            try {
+                // Parse the ISO string directly - it already includes timezone info
+                const date = new Date(timestamp);
+
+                if (isNaN(date.getTime())) {
+                    console.error('Invalid timestamp:', timestamp);
+                    return 'Invalid Date';
+                }
+
+                // Convert to local time and show only time
+                return date.toLocaleString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } catch (error) {
+                console.error('Error formatting timestamp:', error);
+                return 'Invalid Date';
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const initialDataElement = document.getElementById('initial-data');

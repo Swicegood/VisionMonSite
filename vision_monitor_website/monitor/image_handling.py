@@ -2,7 +2,7 @@ import logging
 from django.http import HttpResponse, Http404
 import redis
 import base64
-from .db_operations import get_db_connection
+from .db_operations import get_db_connection, get_frame_image_from_db
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +84,10 @@ def get_composite_images(latest_frame_analyses):
         if composite_data:
             composite_images[camera_id] = base64.b64encode(composite_data).decode('utf-8')
     return composite_images
+
+def get_frame_image(request, data_id):
+    image_data = get_frame_image_from_db(data_id)
+    if image_data:
+        return HttpResponse(image_data, content_type='image/jpeg')
+    else:
+        return HttpResponse(status=404)
