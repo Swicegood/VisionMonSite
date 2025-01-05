@@ -15,7 +15,7 @@ export function colorCodeState(element, state) {
         element.classList.add('bg-danger', 'text-white');
     } else if (lowerState.includes('night-time')) {
         element.classList.add('bg-secondary', 'text-white');
-    } else if (lowerState.includes('religious') || lowerState.includes('religious') 
+    } else if (lowerState.includes('religious') || lowerState.includes('gathering') 
         || lowerState.includes('eating') ) {
         element.classList.add('bg-warning');
     } else if (lowerState.includes('nothing')) {
