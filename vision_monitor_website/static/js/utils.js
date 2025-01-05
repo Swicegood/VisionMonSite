@@ -15,12 +15,12 @@ export function colorCodeState(element, state) {
         element.classList.add('bg-danger', 'text-white');
     } else if (lowerState.includes('night-time')) {
         element.classList.add('bg-secondary', 'text-white');
-    } else if (lowerState.includes('festival happening') || lowerState.includes('crowd gathering') 
+    } else if (lowerState.includes('big religious festival') || lowerState.includes('religious or spiritual gathering') 
         || lowerState.includes('eating') ) {
         element.classList.add('bg-warning');
-    } else if (lowerState.includes('quiet')) {
+    } else if (lowerState.includes('nothing')) {
         element.classList.add('bg-success', 'text-white');
-    } else if (lowerState.includes('person')) {
+    } else if (lowerState.includes('single person')) {
         element.classList.add('bg-info', 'text-white');
     } else {
         element.classList.add('bg-light');

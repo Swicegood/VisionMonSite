@@ -12,7 +12,7 @@ alert_manager = AlertManager()
 
 camera_state_windows = {}
 facility_state_window = deque(maxlen=900)  # 15 minutes * 60 seconds = 900 seconds
-state_key_phrases = ["bustling", "festival happening", "crowd gathering", "over capacity", "night-time", "quiet", "person present", "people eating", "door open"]
+state_key_phrases = ["bustling", "big religious festival", "religious or spiritual gathering", "over capacity", "night-time", "nothing", "single person present", "people eating", "door open"]
 
 def parse_facility_state(raw_message):
     try:
@@ -35,7 +35,7 @@ def parse_facility_state(raw_message):
         
         alerts = []
         for camera_id, state in most_frequent_states.items():
-            is_alerting = any(phrase in state.lower() for phrase in ["festival happening", "crowd gathering", "door open"])
+            is_alerting = any(phrase in state.lower() for phrase in ["big religious festival", "religious or spiritual gathering", "door open"])
             alert_result = alert_manager.update_state(camera_id, is_alerting)
             if alert_result:
                 alerts.append((camera_id, alert_result, state))
@@ -72,7 +72,7 @@ camera_alert_config = {
     },
     "Back_Driveway 2": {
         "penalty": 0.7,
-        "alert_states": {"bustling", "festival happening"}
+        "alert_states": {"bustling", "big religious festival"}
     },
     "Bhoga_Shed 3": {
         "penalty": 0.7,
@@ -84,7 +84,7 @@ camera_alert_config = {
     },
     "Hall 8": {
         "penalty": 0.4,
-        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+        "alert_states": {"bustling", "religious or spiritual gathering", "big religious festival"}
     },
     "Kitchen 9": {
         "penalty": 0.7,
@@ -92,15 +92,15 @@ camera_alert_config = {
     },
     "Prabhupada 11": {
         "penalty": 0.5,
-        "alert_states": {"festival happening"}
+        "alert_states": {"big religious festival"}
     },        
     "Stage 12": {
         "penalty": 0.4,
-        "alert_states": {"bustling", "crowd gathering", "festival happening"}
+        "alert_states": {"bustling", "religious or spiritual gathering", "big religious festival"}
     },
     "Temple 13": {
         "penalty": 0.4,
-        "alert_states": {"festival happening"}
+        "alert_states": {"big religious festival"}
     },
     "Walk-in 15": {
         "penalty": 0.5,
@@ -108,26 +108,26 @@ camera_alert_config = {
 },
     "Axis 17": {
         "penalty": 0.1,
-        "alert_states": {"festival happening"}
+        "alert_states": {"big religious festival"}
     }
     # Add other cameras with their specific penalties and problematic states
 }
 
 facility_config = {
-    "crowd gathering": {
-        "alert_states": ["crowd gathering", "festival happening"],
+    "religious or spiritual gathering": {
+        "alert_states": ["religious or spiritual gathering", "big religious festival"],
         "penalty":  1
     },
-    "quiet": {
-        "alert_states": ["quiet"],
+    "nothing": {
+        "alert_states": ["nothing"],
         "penalty": 1 # No penalty for quiet state
     },
     "night-time": {
         "alert_states": ["night-time"],
         "penalty": 1
     },
-    "person present": {
-        "alert_states": ["person present"],
+    "single person present": {
+        "alert_states": ["single person present"],
         "penalty": 1
     },
     "people eating": {

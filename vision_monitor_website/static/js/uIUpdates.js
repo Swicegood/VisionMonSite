@@ -385,12 +385,12 @@ export function getStateIcon(state) {
         return '<i class="fas fa-users" title="Bustling"></i>';
     } else if (lowerState.includes('night-time')) {
         return '<i class="fas fa-moon" title="Night-time"></i>';
-    } else if (lowerState.includes('festival happening') || lowerState.includes('crowd gathering')) {
+    } else if (lowerState.includes('big religious festival') || lowerState.includes('religious or spiritual gathering')) {
         return '<i class="fas fa-star" title="Festival/Crowd"></i>';
-    } else if (lowerState.includes('quiet')) {
-        return '<i class="fas fa-volume-mute" title="Quiet"></i>';
+    } else if (lowerState.includes('nothing')) {
+        return '<i class="fas fa-volume-mute" title="Nothing"></i>';
     } else if (lowerState.includes('person')) {
-        return '<i class="fas fa-walking" title="Person Present"></i>';
+        return '<i class="fas fa-walking" title="single person Present"></i>';
     } else if (lowerState.includes('eating')) {
         return '<i class="fas fa-utensils" title="People Eating"></i>';
     } else if (lowerState.includes('door open')) {
