@@ -385,11 +385,11 @@ export function getStateIcon(state) {
         return '<i class="fas fa-users" title="Bustling"></i>';
     } else if (lowerState.includes('night-time')) {
         return '<i class="fas fa-moon" title="Night-time"></i>';
-    } else if (lowerState.includes('big religious festival') || lowerState.includes('religious or spiritual gathering')) {
+    } else if (lowerState.includes('religious') || lowerState.includes('religious')) {
         return '<i class="fas fa-star" title="Festival/Crowd"></i>';
     } else if (lowerState.includes('nothing')) {
         return '<i class="fas fa-volume-mute" title="Nothing"></i>';
-    } else if (lowerState.includes('person')) {
+    } else if (lowerState.includes('single person')) {
         return '<i class="fas fa-walking" title="single person Present"></i>';
     } else if (lowerState.includes('eating')) {
         return '<i class="fas fa-utensils" title="People Eating"></i>';
