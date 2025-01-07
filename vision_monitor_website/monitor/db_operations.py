@@ -233,3 +233,77 @@ def get_frame_image_from_db(data_id):
         return None
     finally:
         conn.close()
+
+def fetch_timeline_events_paginated(offset=0, limit=20, camera_id=None):
+    """
+    Fetch timeline events with pagination.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logger.error("Database connection failed")
+            return []
+
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            query = """
+            SELECT 
+                vm.camera_id,
+                vm.camera_name,
+                vm.timestamp,
+                vm.data_id,
+                COALESCE(vm.description, 'No description available') as description,
+                (
+                    SELECT raw_message
+                    FROM state_result sr
+                    WHERE sr.timestamp <= vm.timestamp
+                    ORDER BY sr.timestamp DESC
+                    LIMIT 1
+                ) as state_data
+            FROM visionmon_metadata vm
+            """
+
+            params = []
+            if camera_id:
+                query += " WHERE vm.camera_id = %s"
+                params.append(camera_id)
+
+            query += """
+            ORDER BY vm.timestamp DESC
+            OFFSET %s
+            LIMIT %s
+            """
+            params.extend([offset, limit])
+
+            cur.execute(query, params)
+            results = cur.fetchall()
+
+            formatted_results = []
+            for row in results:
+                timestamp = row['timestamp']
+                formatted_timestamp = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f%z') if timestamp else None
+
+                state_data = json.loads(row['state_data']) if row['state_data'] else {}
+                camera_states = state_data.get('camera_states', {})
+                camera_state = ''
+                source_name = str(row['camera_name']).split(' ')[0]
+                for target_name, state in camera_states.items():
+                    target_base = target_name.split(' ')[0]
+                    if source_name == target_base:
+                        camera_state = state
+                        break
+
+                formatted_results.append({
+                    'camera_id': row['camera_id'],
+                    'camera_name': row['camera_name'],
+                    'timestamp': formatted_timestamp,
+                    'data_id': row['data_id'],
+                    'description': row['description'],
+                    'state': camera_state
+                })
+            return formatted_results
+    except Exception as e:
+        logger.error(f"Error fetching timeline events (paginated): {str(e)}")
+        return []
+    finally:
+        if conn:
+            conn.close()

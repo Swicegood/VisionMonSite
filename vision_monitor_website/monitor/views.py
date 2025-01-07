@@ -9,7 +9,7 @@ from asgiref.sync import async_to_sync
 import json
 from datetime import timedelta
 
-from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analyses, fetch_recent_llm_outputs, insert_facility_status, fetch_timeline_events
+from .db_operations import fetch_latest_facility_state, fetch_latest_frame_analyses, fetch_recent_llm_outputs, insert_facility_status, fetch_timeline_events, fetch_timeline_events_paginated
 from .state_management import parse_facility_state
 from .image_handling import get_composite_images
 from .notifications import notify, test_notification
@@ -187,7 +187,7 @@ def no_show_webhook(request):
     
 @require_http_methods(["GET"])
 def get_timeline_events(request, camera_id):
-    start_time = timezone.now() - timedelta(hours=3)
+    start_time = timezone.now() - timedelta(hours=1)
     end_time = timezone.now()
     events = fetch_timeline_events(start_time, end_time, camera_id)
     return JsonResponse({"events": events})
@@ -196,3 +196,19 @@ def get_timeline_events(request, camera_id):
 def get_latest_frame_analyses(request):
     latest_analyses = fetch_latest_frame_analyses()
     return JsonResponse({"latest_analyses": latest_analyses})
+
+@require_http_methods(["GET"])
+def get_timeline_events_paginated(request):
+    """
+    Returns a chunk of timeline events based on offset & limit
+    """
+    try:
+        camera_id = request.GET.get('camera_id')  # optional
+        offset = int(request.GET.get('offset', 0))
+        limit = int(request.GET.get('limit', 20))
+
+        events = fetch_timeline_events_paginated(offset=offset, limit=limit, camera_id=camera_id)
+        return JsonResponse({"events": events})
+    except Exception as e:
+        logger.error(f"Error in get_timeline_events_paginated: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)

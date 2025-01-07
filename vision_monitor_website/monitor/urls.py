@@ -26,5 +26,6 @@ urlpatterns = [
     path('timeline/', views.timeline_view, name='timeline'),
     path('get_timeline_events/<str:camera_id>/', views.get_timeline_events, name='get_timeline_events'),
     path('get_latest_frame_analyses/', views.get_latest_frame_analyses, name='get_latest_frame_analyses'),
+    path('get_timeline_events_paginated/', views.get_timeline_events_paginated, name='get_timeline_events_paginated'),
 ]
     

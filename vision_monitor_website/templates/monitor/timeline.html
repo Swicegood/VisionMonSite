@@ -195,6 +195,75 @@
         }
     }
 
+    let offset = 0;
+    const limit = 20;
+    let isLoading = false; // prevent duplicate fetches
+
+    // Modify initializeTimelineAndStates or create a new function:
+    function appendToTimeline(events) {
+        const timelineGrid = document.getElementById('timelineTab');
+        if (!timelineGrid) return;
+
+        events.forEach(event => {
+            const timelineRow = document.createElement('div');
+            timelineRow.className = 'timeline-row';
+            const time = formatTimestamp(event.timestamp);
+            const imageUrl = `/get_frame_image/${event.data_id}`;
+            timelineRow.innerHTML = `
+                <div class="time-marker">${time}</div>
+                <div class="middle-strip" >
+                    <div class="event-bubble"></div>
+                </div>
+                <div class="event-motion-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
+                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                        <i class="fas fa-wind" style="font-size: 16px;" title="single person Detection"></i>
+                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                </div>
+                <div class="event-type-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
+                    ${getStateIcon(event.state)}
+                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                </div>
+                <div class="event-thumbnail" style="display: flex; align-items: center; gap: 5px, height: 60px, width: 60px;">
+                    <img src="${imageUrl}" alt="Event at ${time}" style="max-width: 60px; max-height: 60px;">
+                </div>
+            `;
+            timelineRow.onclick = () => {
+                const mainCameraImage = document.getElementById('mainCameraImage');
+                mainCameraImage.src = imageUrl;
+            };
+            timelineGrid.appendChild(timelineRow);
+        });
+    }
+
+    // Trigger another fetch once the user scrolls near bottom:
+    function setupInfiniteScroll() {
+        const container = document.getElementById('timelineContainer');
+        container.addEventListener('scroll', () => {
+            if (isLoading) return;
+
+            // If scrolled to bottom (or near bottom):
+            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
+                isLoading = true;
+                loadMoreTimeline();
+            }
+        });
+    }
+
+    function loadMoreTimeline() {
+        const url = `/get_timeline_events_paginated?offset=${offset}&limit=${limit}`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                appendToTimeline(data.events);
+                offset += limit;
+                isLoading = false;
+            })
+            .catch(err => {
+                console.error("Error fetching more timeline events:", err);
+                isLoading = false;
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const initialDataElement = document.getElementById('initial-data');
         let initialData = {};
@@ -219,6 +288,8 @@
             // Update the timeline and states dynamically
             initializeTimelineAndStates(updatedData);
         });
+
+        setupInfiniteScroll();
     });
 </script>
 {% endblock %}
