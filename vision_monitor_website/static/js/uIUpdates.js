@@ -286,7 +286,8 @@ export function updateTimelinePage(data) {
                         <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                     </div>
                     <img
-                        class="event-thumbnail"
+                        class="event-thumbnail" 
+                        style="height: 60px; width: 60px;"
                         src="${imageUrl}"
                         alt="Event"
                     >

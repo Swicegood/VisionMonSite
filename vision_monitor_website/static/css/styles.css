@@ -233,86 +233,61 @@ body {
 
 /* === Timeline Specific Styles === */
 
+/* Container for the timeline page */
+.timeline-container {
+    display: flex;
+    height: calc(100vh - 40px); /* Adjust based on main-content padding */
+    margin: -20px; /* Counteract main-content padding if necessary */
+}
+
 /* Left Panel */
 .left-panel {
     flex: 3; /* ~3/4 of the width */
     display: flex;
     flex-direction: column;
-    background-color: #f9f9f9;
+}
+
+.scrollable-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px; /* Avoid content hiding behind scrollbar */
 }
 
 .main-camera-display {
-    flex: 1; /* Fill vertical space above thumbnails */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #ccc; /* placeholder BG color */
-    position: relative;
+    margin-bottom: 20px;
 }
 
 .main-camera-display img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover;
+    width: 100%;
+    height: auto;
+    max-height: 500px;
+    object-fit: contain;
 }
 
-/* Scrollable container */
-.scrollable-container {
-    overflow-y: auto; /* Enable vertical scrolling */
-    height: 100%; /* Occupy full height of the parent */
-    scroll-behavior: smooth;
-    padding-right: 10px; /* Space for scrollbar */
-}
-
-/* Custom scrollbar styling */
-.scrollable-container::-webkit-scrollbar {
-    width: 5px; /* Thin scrollbar */
-}
-
-.scrollable-container::-webkit-scrollbar-thumb {
-    background: #888; /* Gray thumb */
-    border-radius: 10px; /* Rounded edges */
-}
-
-.scrollable-container::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Darker on hover */
-}
-
-.scrollable-container::-webkit-scrollbar-track {
-    background: #f0f0f0; /* Light track */
-}
-
+/* Thumbnails Grid */
 .thumbnails-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 4px;
-    padding: 8px;
-    border-top: 1px solid #ccc;
-    background-color: #fff;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 10px;
 }
 
 .thumbnail {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     cursor: pointer;
     border: 1px solid #ddd;
+    padding: 5px;
+    transition: all 0.3s ease;
     background-color: #fafafa;
-    padding: 4px;
-    transition: background-color 0.2s ease;
 }
 
 .thumbnail:hover {
+    transform: scale(1.05);
     background-color: #f1f1f1;
 }
 
 .thumbnail img {
     width: 100%;
     height: auto;
-    object-fit: cover;
-    border: 1px solid #ccc;
-    margin-bottom: 4px;
 }
 
 .thumbnail-label {
@@ -321,55 +296,48 @@ body {
     word-wrap: break-word;
 }
 
-/* Right Panel (Timeline and States) */
+/* Right Panel */
 .timeline-panel {
-    flex: 1; /* ~1/4 of the width */
+    width: 300px; /* Fixed width for the right panel */
+    background-color: #fff;
+    border-left: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
-    border-left: 1px solid #ccc;
-    min-width: 280px;
-    max-width: 350px;
-    background-color: #fff;
 }
 
 .tab-header {
     display: flex;
-    flex-direction: row;
     border-bottom: 1px solid #ccc;
 }
 
 .tab-header button {
     flex: 1;
+    padding: 10px;
     border: none;
     background-color: #f7f7f7;
-    padding: 12px;
     cursor: pointer;
     font-size: 1rem;
-    outline: none;
 }
 
 .tab-header button.active {
     background-color: #fff;
-    border-bottom: 2px solid #007aff; /* highlight the active tab */
+    border-bottom: 2px solid #007bff;
+    color: #007bff;
 }
 
 .zoom-slider-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-bottom: 1px solid #eee;
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .zoom-slider {
-    width: 80%;
+    width: 100%;
     cursor: pointer;
 }
 
 .timeline-content {
     flex: 1;
     overflow-y: auto;
-    position: relative;
     padding: 10px;
 }
 
@@ -379,28 +347,43 @@ body {
     row-gap: 20px;
 }
 
+.timeline-row {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    border: none;
+    border-radius: 4px;
+}
+
 .time-marker {
-    font-size: 0.85rem;
+    flex: none;
+    font-size: 0.9rem;
     color: #666;
+    width: 60px;
     text-align: right;
-    padding-right: 5px;
+    margin-right: 10px;
 }
 
-.event-thumbnail {
-    width: 40px;
-    height: 40px;
-    margin: auto; /* center horizontally in its grid cell */
+.event-thumbnail img {
+    width: 60px;
+    height: 60px;
     object-fit: cover;
-    border: 1px solid #ccc;
-    background-color: #eee;
+    border-radius: 4px;
 }
 
-.state-indicator {
-    margin: auto;
-    font-size: 0.85rem;
-    color: #444;
+.event-details {
+    flex: 1;
+    display: flex;
+    align-items: center;
 }
 
+.event-details i {
+    font-size: 1.2rem;
+    color: #007bff;
+    margin-right: 10px;
+}
+
+/* Scrollbar styling for right panel */
 .timeline-content::-webkit-scrollbar {
     width: 8px;
 }
@@ -411,65 +394,4 @@ body {
 
 .timeline-content::-webkit-scrollbar-thumb {
     background: #ccc;
-    display: flex;
-    flex-direction: row;
-}
-
-.timeline-row {
-    display: grid;
-    grid-template-columns: 80px 1fr 100px;
-    align-items: center;
-    margin-bottom: -10px;
-    display: flex; 
-    justify-content: space-between;
-}
-
-.timeline-image {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.timeline-image:hover {
-    transform: scale(1.1);
-}
-
-.time-marker {
-    flex:none;
-    font-size: 0.9rem;
-    color: #d3d3d3;
-    text-align: right;
-    padding-right: 25px;
-}
-
-.middle-strip {
-    height: 80px;
-    background-color: #eee;
-    position: relative;
-    padding-right: 10px;
-}
-
-.middle-strip::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 10px;
-    height: 10px;
-    background-color: #666;
-    border-radius: 50%;
-}
-
-.event-bubble {
-    background-color: #add8e6;
-    width: 10px;
-    height: 10px;
-    position: absolute;
-    left: 0;
-    margin-top: 35px;
-    border-radius: 50%;
 }

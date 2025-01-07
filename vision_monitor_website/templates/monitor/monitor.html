@@ -1,70 +1,65 @@
+{% extends 'base.html' %}
 {% load static %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision Monitor</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
-</head>
-<body>
-    <div class="container-fluid">
-        <h1 id="vision-monitor" class="text-center mb-4">Vision Monitor</h1>
+{% block extra_css %}
+<link href="{% static 'css/styles.css' %}" rel="stylesheet">
+{% endblock %}
 
-        <div id="overall" class="mb-2"></div>
-        <div id="facility-state" class="mb-4"></div>
+{% block content %}
+<div class="container-fluid">
+    <h1 id="vision-monitor" class="text-center mb-4">Vision Monitor</h1>
 
-        <div id="camera-states" class="mb-4">
-            <!-- Camera states will be dynamically inserted here -->
-        </div>
+    <div id="overall" class="mb-2"></div>
+    <div id="facility-state" class="mb-4"></div>
 
-        <div id="camera-feeds" class="camera-grid">
-            <!-- Camera feeds will be dynamically inserted here -->
-        </div>
-
-        <div id="llm-output" class="mt-4">
-            <h2>LLM Output</h2>
-            <!-- LLM output will be dynamically inserted here -->
-        </div>
+    <div id="camera-states" class="mb-4">
+        <!-- Camera states will be dynamically inserted here -->
     </div>
 
-    <div id="compositeImageModal" class="modal fade" tabindex="-1" aria-labelledby="compositeImageModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <img id="compositeModalImage" class="img-fluid" src="" alt="Composite Camera Image">
-                </div>
+    <div id="camera-feeds" class="camera-grid">
+        <!-- Camera feeds will be dynamically inserted here -->
+    </div>
+
+    <div id="llm-output" class="mt-4">
+        <h2>LLM Output</h2>
+        <!-- LLM output will be dynamically inserted here -->
+    </div>
+</div>
+
+<div id="compositeImageModal" class="modal fade" tabindex="-1" aria-labelledby="compositeImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img id="compositeModalImage" class="img-fluid" src="" alt="Composite Camera Image">
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modal for full images -->
-    <div id="imageModal" class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <img id="fullImage" class="img-fluid" alt="Full Camera Image">
-                </div>
+<!-- Modal for full images -->
+<div id="imageModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img id="fullImage" class="img-fluid" alt="Full Camera Image">
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modal for full text -->
-    <div id="textModal" class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content-text">
-                <div class="modal-body">
-                    <p id="fullText"></p>
-                </div>
+<!-- Modal for full text -->
+<div id="textModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content-text">
+            <div class="modal-body">
+                <p id="fullText"></p>
             </div>
         </div>
     </div>
+</div>
 
-    {{ initial_data|json_script:"initial-data" }}
+{{ initial_data|json_script:"initial-data" }}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="{% static 'js/main.js' %}"></script>
-</body>
-</html>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="{% static 'js/main.js' %}"></script>
+{% endblock %}

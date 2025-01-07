@@ -1,43 +1,13 @@
+{% extends 'base.html' %}
 {% load static %}
 
-<!DOCTYPE html>
-<html lang="en">
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Camera Timeline Page</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* === BASIC PAGE LAYOUT === */
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: Arial, sans-serif;
-            color: #333;
-            overflow: hidden;
-        }
-
-        body {
-            display: flex;
-            flex-direction: row;
-            background-color: #f0f0f0;
-        }
-
-        .timeline-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            row-gap: 20px;
-        }
-    </style>
-</head>
-
-<body>
-    {{ initial_data|json_script:"initial-data" }}
-
-    <!-- ===== LEFT PANEL: MAIN CAMERA + THUMBNAILS ===== -->
+{% block content %}
+<div class="timeline-container">
     <!-- ===== LEFT PANEL: MAIN CAMERA + THUMBNAILS ===== -->
     <div class="left-panel">
         <!-- Scrollable container -->
@@ -82,75 +52,79 @@
             </div>
         </div>
     </div>
+</div>
 
-    <script type="module">
-        import { selectCamera, getStateIcon } from "{% static 'js/uIUpdates.js' %}";
-        import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
-        import logger from "{% static 'js/logger.js' %}";
-        // Tab switching
-        function showTab(tabName) {
-            const buttons = document.querySelectorAll('.tab-header button');
-            buttons.forEach(btn => btn.classList.remove('active'));
+{{ initial_data|json_script:"initial-data" }}
+{% endblock %}
 
-            document.getElementById('timelineTab').style.display = 'none';
-            document.getElementById('statesTab').style.display = 'none';
+{% block extra_js %}
+<script type="module">
+    import { selectCamera, getStateIcon } from "{% static 'js/uIUpdates.js' %}";
+    import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
+    import logger from "{% static 'js/logger.js' %}";
 
-            if (tabName === 'timeline') {
-                document.getElementById('timelineTab').style.display = 'grid';
-                buttons[0].classList.add('active');
-            } else {
-                document.getElementById('statesTab').style.display = 'grid';
-                buttons[1].classList.add('active');
-            }
+    // Tab switching
+    function showTab(tabName) {
+        const buttons = document.querySelectorAll('.tab-header button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById('timelineTab').style.display = 'none';
+        document.getElementById('statesTab').style.display = 'none';
+
+        if (tabName === 'timeline') {
+            document.getElementById('timelineTab').style.display = 'grid';
+            buttons[0].classList.add('active');
+        } else {
+            document.getElementById('statesTab').style.display = 'grid';
+            buttons[1].classList.add('active');
         }
+    }
 
-        // Zoom slider
-        function changeZoom(value) {
-            const timelineGrids = document.querySelectorAll('.timeline-grid');
-            timelineGrids.forEach(grid => {
-                grid.style.rowGap = (20 * value / 5) + 'px';
-            });
-        }
+    // Zoom slider
+    function changeZoom(value) {
+        const timelineGrids = document.querySelectorAll('.timeline-grid');
+        timelineGrids.forEach(grid => {
+            grid.style.rowGap = (20 * value / 5) + 'px';
+        });
+    }
 
-        // Dynamically populate thumbnails
-        function initializeThumbnails(cameras) {
-            const thumbnailsGrid = document.getElementById('thumbnailsGrid');
-            cameras.forEach(camera => {
-                const thumbnailDiv = document.createElement('div');
-                thumbnailDiv.className = 'thumbnail';
-                thumbnailDiv.onclick = () => selectCamera(camera.index, camera.id);
+    // Dynamically populate thumbnails
+    function initializeThumbnails(cameras) {
+        const thumbnailsGrid = document.getElementById('thumbnailsGrid');
+        cameras.forEach(camera => {
+            const thumbnailDiv = document.createElement('div');
+            thumbnailDiv.className = 'thumbnail';
+            thumbnailDiv.onclick = () => selectCamera(camera.index, camera.id);
 
-                thumbnailDiv.innerHTML = `
-                    <img src="${camera.image}" alt="${camera.name}">
-                    <div class="thumbnail-label">${camera.name}</div>
-                `;
-                thumbnailsGrid.appendChild(thumbnailDiv);
-            });
-        }
+            thumbnailDiv.innerHTML = `
+                <img src="${camera.image}" alt="${camera.name}">
+                <div class="thumbnail-label">${camera.name}</div>
+            `;
+            thumbnailsGrid.appendChild(thumbnailDiv);
+        });
+    }
 
+    // Initialize timeline and states from initial data
+    function initializeTimelineAndStates(data) {
+        const timelineGrid = document.getElementById('timelineTab');
+        const statesGrid = document.getElementById('statesTab');
+        timelineGrid.innerHTML = '';
+        statesGrid.innerHTML = '';
 
+        if (data.events) {
+            data.events.forEach(event => {
+                const timelineRow = document.createElement('div');
+                timelineRow.className = 'timeline-row';
 
-        // Initialize timeline and states from initial data
-        function initializeTimelineAndStates(data) {
-            const timelineGrid = document.getElementById('timelineTab');
-            const statesGrid = document.getElementById('statesTab');
-            timelineGrid.innerHTML = '';
-            statesGrid.innerHTML = '';
+                if (!event || !event.timestamp) {
+                    console.error('Invalid event data:', event);
+                    return null;
+                }
 
-            if (data.events) {
-                data.events.forEach(event => {
-                    const timelineRow = document.createElement('div');
-                    timelineRow.className = 'timeline-row';
-
-                    if (!event || !event.timestamp) {
-                        console.error('Invalid event data:', event);
-                        return null;
-                    }
-
-                    // Log the incoming timestamp for debugging
-                    const time = formatTimestamp(event.timestamp);
-                    const imageUrl = `/get_frame_image/${event.data_id}`;
-                    timelineRow.innerHTML = `
+                // Log the incoming timestamp for debugging
+                const time = formatTimestamp(event.timestamp);
+                const imageUrl = `/get_frame_image/${event.data_id}`;
+                timelineRow.innerHTML = `
                         <div class="timeline-row" >
                             <div class="time-marker">${time}</div>
                             <div class="middle-strip" >
@@ -165,26 +139,26 @@
                                 ${getStateIcon(event.state)}
                                 <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
                             </div>
-                            <div class="event-thumbnail" style="display: flex; align-items: center; gap: 5px;">
+                            <div class="event-thumbnail" style="display: flex; align-items: center; gap: 5px, height: 60px, width: 60px;">
                                 <img src="${imageUrl}" alt="Event at ${time}" 
                                     style="max-width: 60px; max-height: 60px;" 
                                     class="timeline-image" ">
                             </div>
                         </div>
                     `;
-                    timelineRow.onclick = () => {
+                timelineRow.onclick = () => {
                     const mainCameraImage = document.getElementById('mainCameraImage');
                     mainCameraImage.src = imageUrl;
-                    }
-                    timelineGrid.appendChild(timelineRow);
-                });
-            }
+                };
+                timelineGrid.appendChild(timelineRow);
+            });
         }
+    }
 
-        function showFullImage(src) {
-            const modal = document.createElement('div');
-            modal.className = 'modal fade';
-            modal.innerHTML = `
+    function showFullImage(src) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-body">
@@ -193,60 +167,58 @@
                     </div>
                 </div>
             `;
-            document.body.appendChild(modal);
-            new bootstrap.Modal(modal).show();
-            modal.addEventListener('hidden.bs.modal', () => modal.remove());
-        }
+        document.body.appendChild(modal);
+        new bootstrap.Modal(modal).show();
+        modal.addEventListener('hidden.bs.modal', () => modal.remove());
+    }
 
 
-        function formatTimestamp(timestamp) {
-            try {
-                // Parse the ISO string directly - it already includes timezone info
-                const date = new Date(timestamp);
+    function formatTimestamp(timestamp) {
+        try {
+            // Parse the ISO string directly - it already includes timezone info
+            const date = new Date(timestamp);
 
-                if (isNaN(date.getTime())) {
-                    console.error('Invalid timestamp:', timestamp);
-                    return 'Invalid Date';
-                }
-
-                // Convert to local time and show only time
-                return date.toLocaleString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                });
-            } catch (error) {
-                console.error('Error formatting timestamp:', error);
+            if (isNaN(date.getTime())) {
+                console.error('Invalid timestamp:', timestamp);
                 return 'Invalid Date';
             }
+
+            // Convert to local time and show only time
+            return date.toLocaleString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (error) {
+            console.error('Error formatting timestamp:', error);
+            return 'Invalid Date';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const initialDataElement = document.getElementById('initial-data');
+        let initialData = {};
+        if (initialDataElement) {
+            try {
+                initialData = JSON.parse(initialDataElement.textContent);
+                console.debug('Parsed Initial Data:', initialData);
+            } catch (error) {
+                console.error('Error parsing initial data:', error);
+            }
+        } else {
+            console.warn('Initial data element not found');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const initialDataElement = document.getElementById('initial-data');
-            let initialData = {};
-            if (initialDataElement) {
-                try {
-                    initialData = JSON.parse(initialDataElement.textContent);
-                    console.debug('Parsed Initial Data:', initialData);
-                } catch (error) {
-                    console.error('Error parsing initial data:', error);
-                }
-            } else {
-                console.warn('Initial data element not found');
-            }
+        if (initialData && initialData.cameras) {
+            initializeThumbnails(initialData.cameras);
+            initializeTimelineAndStates(initialData);
+        }
 
-            if (initialData && initialData.cameras) {
-                initializeThumbnails(initialData.cameras);
-                initializeTimelineAndStates(initialData);
-            }
-
-            initializeWebSocket((updatedData) => {
-                logger.debug('Received WebSocket update:', updatedData);
-                // Update the timeline and states dynamically
-                initializeTimelineAndStates(updatedData);
-            });
+        initializeWebSocket((updatedData) => {
+            logger.debug('Received WebSocket update:', updatedData);
+            // Update the timeline and states dynamically
+            initializeTimelineAndStates(updatedData);
         });
-    </script>
-</body>
-
-</html>
+    });
+</script>
+{% endblock %}
