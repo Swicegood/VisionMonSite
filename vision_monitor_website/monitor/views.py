@@ -70,7 +70,7 @@ def monitor(request):
 
 def timeline_view(request):
     end_time = timezone.now()
-    start_time = end_time - timedelta(hours=3)  # Show last 3 hours
+    start_time = end_time - timedelta(hours=1)  # Show last 1 hour
     
     latest_analyses = fetch_latest_frame_analyses()
     events = fetch_timeline_events(start_time, end_time, camera_id=None)

@@ -7,6 +7,12 @@ const llmOutput = document.getElementById('llm-output');
 const facilityState = document.getElementById('facility-state');
 const overall = document.getElementById('overall');
 
+// ====== GLOBAL PAGINATION STATE ======
+let offset = 0;
+let limit = 20;
+let isLoading = false;
+let currentCameraId = null;  // Track currently selected camera
+
 export function updateCameraStates(cameraStates) {
     const cameraStatesDiv = document.getElementById('camera-states');
     if (!cameraStatesDiv) {
@@ -228,8 +234,110 @@ export function initializeTimelinePage(initialData) {
     }
 }
 
+// Utility function to add new events to the existing timeline
+function appendToTimeline(events) {
+    const timelineContainer = document.getElementById('timelineContainer');
+    if (!timelineContainer) {
+        console.warn('Timeline container not found');
+        return;
+    }
+
+    events.forEach((event) => {
+        const timelineRow = document.createElement('div');
+        timelineRow.className = 'timeline-row';
+        const time = formatTimestamp(event.timestamp);
+        const imageUrl = `/get_frame_image/${event.data_id}`;
+        timelineRow.innerHTML = `
+            <div class="time-marker">${time}</div>
+            <div class="middle-strip">
+                <div class="event-bubble"></div>
+            </div>
+            <div class="event-motion-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
+                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+                <i class="fas fa-wind" style="font-size: 16px;" title="Person Detection"></i>
+                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+            </div>
+            <div class="event-type-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
+                ${getStateIcon(event.state)}
+                <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
+            </div>
+            <img
+                class="event-thumbnail" 
+                style="height: 60px; width: 60px;"
+                src="${imageUrl}"
+                alt="Event"
+            >
+        `;
+        // Click handler to swap main camera image
+        timelineRow.onclick = () => {
+            const mainCameraImage = document.getElementById('mainCameraImage');
+            if (mainCameraImage) {
+                mainCameraImage.src = imageUrl;
+            }
+        };
+        timelineContainer.appendChild(timelineRow);
+    });
+}
+
+// Set up scroll listener to fetch more data
+function setupInfiniteScroll() {
+    const container = document.getElementById('timelineContainer');
+    if (!container) {
+        console.warn('Timeline container not found for infinite scroll');
+        return;
+    }
+    container.addEventListener('scroll', () => {
+        if (isLoading) return;
+        // If scrolled close to bottom
+        if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
+            isLoading = true;
+            loadMoreTimeline();
+        }
+    });
+}
+
+// Load more timeline events (paginates by offset/limit)
+function loadMoreTimeline() {
+    const params = new URLSearchParams({
+        offset: offset,
+        limit: limit
+    });
+    
+    // Add camera_id to query params if we have one selected
+    if (currentCameraId) {
+        params.append('camera_id', currentCameraId);
+    }
+    
+    const url = `/get_timeline_events_paginated?${params.toString()}`;
+    
+    fetch(url)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            appendToTimeline(data.events);
+            offset += limit;
+            isLoading = false;
+        })
+        .catch((err) => {
+            console.error('Error fetching more timeline events:', err);
+            isLoading = false;
+        });
+}
+
 export function updateTimelinePage(data) {
     console.log('Updating timeline page with data:', data);
+
+    // Reset the timeline container and offset on each update
+    offset = 0;
+    isLoading = false;
+    const timelineContainer = document.getElementById('timelineContainer');
+    if (timelineContainer) {
+        timelineContainer.innerHTML = '';
+    }
 
     if (data.cameras) {
         const thumbnailsGrid = document.getElementById('thumbnailsGrid');
@@ -260,46 +368,14 @@ export function updateTimelinePage(data) {
             });
         }
 
-        // Update timeline content
-        if (timelineContainer) {
-            timelineContainer.innerHTML = ''; // Clear current timeline
-            logger.debug('Updating timeline events:', data.events?.length || 0);
-
-            data.events.forEach((event, index) => {
-                logger.debug(`Processing timeline event ${index}:`, event);
-
-                const timelineRow = document.createElement('div');
-                timelineRow.className = 'timeline-row';
-                const imageUrl = `/get_frame_image/${event.data_id}`;
-                timelineRow.innerHTML = `
-                    <div class="time-marker">${formatTimestamp(event.timestamp)}</div>
-                    <div class="middle-strip">
-                        <div class="event-bubble"></div>
-                    </div>
-                    <div class="event-motion-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 10px;">
-                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
-                    <i class="fas fa-wind" style="font-size: 16px;" title="Person Detection"></i>
-                    <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
-                    </div>
-                    <div class="event-type-symbol" style="display: flex; align-items: center; gap: 5px; padding-left: 5px;">
-                        ${getStateIcon(event.state)}
-                        <div style="width: 20px; height: 1px; background-color: #d3d3d3;"></div>
-                    </div>
-                    <img
-                        class="event-thumbnail" 
-                        style="height: 60px; width: 60px;"
-                        src="${imageUrl}"
-                        alt="Event"
-                    >
-                `;
-                // Add click handler to both row and image
-                timelineRow.onclick = () => {
-                    const mainCameraImage = document.getElementById('mainCameraImage');
-                    mainCameraImage.src = imageUrl;
-                };
-                timelineContainer.appendChild(timelineRow);
-            });
+        // Append initial chunk of events
+        if (data.events) {
+            appendToTimeline(data.events);
+            offset += data.events.length; // Keep track of how many loaded
         }
+
+        // Re-initialize scroll listener after setting initial content
+        setupInfiniteScroll();
     } else {
         logger.warn('No camera data provided for timeline update');
     }
@@ -332,11 +408,18 @@ function formatTimestamp(timestamp) {
 // Main camera selection
 export function selectCamera(cameraIndex, cameraId) {
     logger.debug(`Selecting camera with index ${cameraIndex} and ID ${cameraId}`);
+    
+    // Update the current camera
+    currentCameraId = cameraId;
 
     const mainCameraImage = document.getElementById('mainCameraImage');
     const imageUrl = `/get_latest_image/${cameraIndex}`;
     logger.debug(`Setting main camera image src to: ${imageUrl}`);
     mainCameraImage.src = imageUrl;
+
+    // Reset pagination when selecting a new camera
+    offset = 0;
+    isLoading = false;
 
     // Fetch both timeline events and latest frame analyses
     const timelineUrl = `/get_timeline_events/${cameraId}`;
@@ -344,13 +427,10 @@ export function selectCamera(cameraIndex, cameraId) {
     logger.debug(`Fetching timeline events from: ${timelineUrl}`);
     logger.debug(`Fetching latest analyses from: ${analysesUrl}`);
 
-    // Use Promise.all to fetch both in parallel
-    const [timelinePromise, analysesPromise] = [
+    Promise.all([
         fetch(timelineUrl),
         fetch(analysesUrl)
-    ];
-
-    Promise.all([timelinePromise, analysesPromise])
+    ])
         .then(responses => {
             logger.debug(`Timeline API response status: ${responses[0].status}`);
             logger.debug(`Analyses API response status: ${responses[1].status}`);
