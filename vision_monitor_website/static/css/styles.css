@@ -330,10 +330,7 @@ body {
     border-bottom: 1px solid #e0e0e0;
 }
 
-.zoom-slider {
-    width: 100%;
-    cursor: pointer;
-}
+
 
 .timeline-content {
     flex: 1;
@@ -394,4 +391,114 @@ body {
 
 .timeline-content::-webkit-scrollbar-thumb {
     background: #ccc;
+}
+
+/* Add these new styles */
+.top-nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.date-button {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-button:hover {
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    color: #666;
+    cursor: pointer;
+}
+
+.icon-button:hover {
+    color: #333;
+}
+
+.tabs-container {
+    padding: 0 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-header {
+    display: flex;
+    gap: 16px;
+}
+
+.zoom-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.zoom-slider {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #e0e0e0;
+    border-radius: 2px;
+    outline: none;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #1a73e8;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Update tab button styles */
+.tab-button {
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+    color: #1a73e8;
+    border-bottom-color: #1a73e8;
+}
+
+/* Update existing timeline styles for finer lines */
+.timeline-row {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.middle-strip {
+    border-left: 1px solid #e0e0e0;
+}
+
+.event-bubble {
+    width: 8px;
+    height: 8px;
+    border: 1px solid #e0e0e0;
 }

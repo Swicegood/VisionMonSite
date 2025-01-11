@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+<link rel="stylesheet" href="{% static 'css/flatpickr.min.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {% endblock %}
 
@@ -27,16 +28,35 @@
 
     <!-- ===== RIGHT PANEL: TIMELINE ===== -->
     <div class="timeline-panel">
-        <!-- Tabs (Timeline / States) -->
-        <div class="tab-header">
-            <button class="active" onclick="showTab('timeline')">Timeline</button>
-            <button onclick="showTab('states')">States</button>
+        <!-- Top Navigation Bar -->
+        <div class="top-nav-container">
+            <!-- Date selector (left side) -->
+            <div class="date-selector">
+                <button class="date-button" onclick="showCalendar()">
+                    <i class="fas fa-calendar"></i>
+                    Thu, January 9
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+
+            <!-- Zoom control (right side) -->
+            <div class="right-controls">
+                <div class="zoom-control">
+                    <i class="fas fa-search-minus"></i>
+                    <input type="range" min="1" max="10" value="5" class="zoom-slider" id="zoomSlider"
+                        oninput="changeZoom(this.value)" />
+                    <i class="fas fa-search-plus"></i>
+                </div>
+            </div>
         </div>
 
-        <!-- Zoom slider -->
-        <div class="zoom-slider-container">
-            <input type="range" min="1" max="10" value="5" class="zoom-slider" id="zoomSlider"
-                oninput="changeZoom(this.value)" />
+        <!-- Tabs Container -->
+        <div class="tabs-container">
+            <!-- Tab buttons -->
+            <div class="tab-header">
+                <button class="tab-button active" onclick="showTab('timeline')">Timeline</button>
+                <button class="tab-button" onclick="showTab('detections')">Detections</button>
+            </div>
         </div>
 
         <!-- Scrollable timeline area -->
@@ -58,6 +78,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script type="module">
     import { selectCamera, getStateIcon } from "{% static 'js/uIUpdates.js' %}";
     import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
@@ -123,9 +145,11 @@
 
                 // Log the incoming timestamp for debugging
                 const time = formatTimestamp(event.timestamp);
+                const date = formatDate(event.timestamp);
                 const imageUrl = `/get_frame_image/${event.data_id}`;
                 timelineRow.innerHTML = `
                         <div class="timeline-row" >
+                            <div class="hidden-date" style="display: none;">${date}</div>
                             <div class="time-marker">${time}</div>
                             <div class="middle-strip" >
                                 <div class="event-bubble"></div>
@@ -195,9 +219,33 @@
         }
     }
 
+    function formatDate(timestamp) {
+        try {
+            const date = new Date(timestamp);
+
+            if (isNaN(date.getTime())) {
+                console.error('Invalid timestamp:', timestamp);
+                return 'Invalid Date';
+            }
+
+            // Format the date as 'Weekday, Month Day, Year'
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return 'Invalid Date';
+        }
+    }
+
     let offset = 0;
     const limit = 20;
     let isLoading = false; // prevent duplicate fetches
+    let selectedStartTime = null; // Store selected start time
+    let selectedEndTime = null;   // Store selected end time
 
     // Modify initializeTimelineAndStates or create a new function:
     function appendToTimeline(events) {
@@ -208,8 +256,10 @@
             const timelineRow = document.createElement('div');
             timelineRow.className = 'timeline-row';
             const time = formatTimestamp(event.timestamp);
+            const date = formatDate(event.timestamp);
             const imageUrl = `/get_frame_image/${event.data_id}`;
             timelineRow.innerHTML = `
+                <div class="hidden-date" style="display: none;">${date}</div>
                 <div class="time-marker">${time}</div>
                 <div class="middle-strip" >
                     <div class="event-bubble"></div>
@@ -233,6 +283,9 @@
             };
             timelineGrid.appendChild(timelineRow);
         });
+
+        // Update the date button after appending events
+        updateDateButton();
     }
 
     // Trigger another fetch once the user scrolls near bottom:
@@ -243,19 +296,39 @@
 
             // If scrolled to bottom (or near bottom):
             if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
-                isLoading = true;
                 loadMoreTimeline();
             }
         });
     }
 
     function loadMoreTimeline() {
-        const url = `/get_timeline_events_paginated?offset=${offset}&limit=${limit}`;
-        fetch(url)
+        if (isLoading) return;
+        isLoading = true;
+
+        let url = '';
+        const params = new URLSearchParams();
+
+        // Use the date-based endpoint if a date range is selected
+        if (selectedStartTime && selectedEndTime) {
+            url = '/get_timeline_events_by_date_paginated/';
+            params.append('start_time', selectedStartTime);
+            params.append('end_time', selectedEndTime);
+        } else {
+            // Use the default paginated endpoint
+            url = '/get_timeline_events_paginated/';
+        }
+
+        // Append pagination parameters
+        params.append('offset', offset);
+        params.append('limit', limit);
+
+        fetch(`${url}?${params.toString()}`)
             .then(response => response.json())
             .then(data => {
-                appendToTimeline(data.events);
-                offset += limit;
+                if (data.events && data.events.length > 0) {
+                    appendToTimeline(data.events);
+                    offset += data.events.length;
+                }
                 isLoading = false;
             })
             .catch(err => {
@@ -278,6 +351,13 @@
             console.warn('Initial data element not found');
         }
 
+        // Set the date button to the current date initially
+        const dateButton = document.querySelector('.date-button');
+        if (dateButton) {
+            const currentDate = new Date();
+            dateButton.innerHTML = `<i class="fas fa-calendar"></i> ${currentDate.toDateString()} <i class="fas fa-chevron-down"></i>`;
+        }
+
         if (initialData && initialData.cameras) {
             initializeThumbnails(initialData.cameras);
             initializeTimelineAndStates(initialData);
@@ -291,5 +371,93 @@
 
         setupInfiniteScroll();
     });
+
+    // Function to update the date button based on the first event in the timeline
+    function updateDateButton() {
+        const timelineGrid = document.getElementById('timelineTab');
+        const dateButton = document.querySelector('.date-button');
+
+        if (!timelineGrid || !dateButton) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    const hiddenDate = entry.target.querySelector('.hidden-date');
+                    if (hiddenDate) {
+                        const eventDate = new Date(hiddenDate.textContent);
+                        dateButton.innerHTML = `<i class="fas fa-calendar"></i> ${formatDate(eventDate)} <i class="fas fa-chevron-down"></i>`;
+                        break; // Stop observing once we find the first visible event
+                    }
+                }
+            }
+        }, {
+            root: timelineGrid,
+            threshold: 0.1 // Adjust this threshold as needed
+        });
+
+        // Observe each timeline row
+        const timelineRows = timelineGrid.querySelectorAll('.timeline-row');
+        timelineRows.forEach(row => observer.observe(row));
+    }
+
+    // Define the showCalendar function
+    window.showCalendar = function() {
+        // Create an input element for the date picker
+        const dateInput = document.createElement('input');
+        dateInput.type = 'text';
+        dateInput.id = 'calendarPicker';
+        dateInput.style.position = 'absolute';
+
+        // Get the position of the tab-header
+        const tabHeader = document.querySelector('.tab-header');
+        if (tabHeader) {
+            const rect = tabHeader.getBoundingClientRect();
+            dateInput.style.left = `${rect.left}px`;
+            dateInput.style.top = `${rect.bottom}px`; // Position it below the tab-header
+        } else {
+            // Fallback position if tab-header is not found
+            dateInput.style.left = '50px';
+            dateInput.style.top = '50px';
+        }
+
+        document.body.appendChild(dateInput);
+
+        // Initialize flatpickr on this element
+        flatpickr(dateInput, {
+            enableTime: false,
+            dateFormat: 'Y-m-d',
+            onClose: function(selectedDates, dateStr) {
+                // Remove the input after picking a date
+                document.body.removeChild(dateInput);
+                if (!dateStr) return;
+
+                // Build a time range of [picked date at 00:00, +1 hour]
+                let pickedDate = new Date(dateStr + "T00:00:00");
+                let endDate = new Date(pickedDate.getTime() + 60 * 60 * 24 *1000);
+
+                let startTimeISO = pickedDate.toISOString();
+                let endTimeISO = endDate.toISOString();
+
+                // Store the selected date range globally
+                selectedStartTime = startTimeISO;
+                selectedEndTime = endTimeISO;
+
+                // Reset pagination
+                offset = 0;
+                isLoading = false;
+
+                // Clear current timeline
+                const timelineGrid = document.getElementById('timelineTab');
+                timelineGrid.innerHTML = '';
+
+                // Fetch events for the selected date range
+                loadMoreTimeline();
+            }
+        });
+
+        // Programmatically open the calendar
+        dateInput.click();
+    }
+
 </script>
 {% endblock %}

@@ -212,3 +212,57 @@ def get_timeline_events_paginated(request):
     except Exception as e:
         logger.error(f"Error in get_timeline_events_paginated: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_timeline_events_by_date(request):
+    """
+    Fetch timeline events for a given date/time range in query params:
+      ?start_time=YYYY-MM-DDTHH:MM:SSZ
+      ?end_time=YYYY-MM-DDTHH:MM:SSZ
+    """
+    try:
+        start_time_str = request.GET.get('start_time')
+        end_time_str = request.GET.get('end_time')
+        camera_id = request.GET.get('camera_id', None) # optional
+
+        if not start_time_str or not end_time_str:
+            return JsonResponse({"error": "Missing start_time or end_time"}, status=400)
+
+        from dateutil import parser
+        start_time = parser.parse(start_time_str)
+        end_time = parser.parse(end_time_str)
+
+        events = fetch_timeline_events(start_time, end_time, camera_id=camera_id)
+        return JsonResponse({"events": events})
+    except Exception as e:
+        logger.error(f"Error in get_timeline_events_by_date: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_timeline_events_by_date_paginated(request):
+    """
+    Fetch timeline events for a given date/time range with pagination:
+      ?start_time=YYYY-MM-DDTHH:MM:SSZ
+      ?end_time=YYYY-MM-DDTHH:MM:SSZ
+      &offset=0
+      &limit=20
+    """
+    try:
+        start_time_str = request.GET.get('start_time')
+        end_time_str = request.GET.get('end_time')
+        offset = int(request.GET.get('offset', 0))
+        limit = int(request.GET.get('limit', 20))
+        camera_id = request.GET.get('camera_id', None)  # optional
+
+        if not start_time_str or not end_time_str:
+            return JsonResponse({"error": "Missing start_time or end_time"}, status=400)
+
+        from dateutil import parser
+        start_time = parser.parse(start_time_str)
+        end_time = parser.parse(end_time_str)
+
+        events = fetch_timeline_events_paginated(offset=offset, limit=limit, start_time=start_time, end_time=end_time, camera_id=camera_id)
+        return JsonResponse({"events": events})
+    except Exception as e:
+        logger.error(f"Error in get_timeline_events_by_date_paginated: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)

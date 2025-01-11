@@ -234,9 +234,9 @@ def get_frame_image_from_db(data_id):
     finally:
         conn.close()
 
-def fetch_timeline_events_paginated(offset=0, limit=20, camera_id=None):
+def fetch_timeline_events_paginated(offset=0, limit=20, start_time=None, end_time=None, camera_id=None):
     """
-    Fetch timeline events with pagination.
+    Fetch timeline events with pagination and optional date range.
     """
     try:
         conn = get_db_connection()
@@ -261,11 +261,18 @@ def fetch_timeline_events_paginated(offset=0, limit=20, camera_id=None):
                 ) as state_data
             FROM visionmon_metadata vm
             """
-
             params = []
+            conditions = []
+
             if camera_id:
-                query += " WHERE vm.camera_id = %s"
+                conditions.append("vm.camera_id = %s")
                 params.append(camera_id)
+            if start_time and end_time:
+                conditions.append("vm.timestamp BETWEEN %s AND %s")
+                params.extend([start_time, end_time])
+
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
 
             query += """
             ORDER BY vm.timestamp DESC
