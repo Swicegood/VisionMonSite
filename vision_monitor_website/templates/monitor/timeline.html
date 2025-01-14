@@ -81,9 +81,19 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script type="module">
-    import { selectCamera, getStateIcon } from "{% static 'js/uIUpdates.js' %}";
+    import {
+        selectCamera,
+        getStateIcon,
+        setupTimelineInfiniteScroll,
+        loadMoreTimelineEvents,
+        setTimelineDateRangeAndReset,
+        appendToTimeline as appendToTimelineFromUIUpdates,
+        CameraState,
+        updateDateButton
+    } from "{% static 'js/uIUpdates.js' %}";
     import { initializeWebSocket } from "{% static 'js/websocket.js' %}";
     import logger from "{% static 'js/logger.js' %}";
+
 
     // Tab switching
     function showTab(tabName) {
@@ -116,7 +126,10 @@
         cameras.forEach(camera => {
             const thumbnailDiv = document.createElement('div');
             thumbnailDiv.className = 'thumbnail';
-            thumbnailDiv.onclick = () => selectCamera(camera.index, camera.id);
+            thumbnailDiv.onclick = () => {
+                selectCamera(camera.index, camera.id);
+                CameraState.setCameraSelected(true); // Update state using the module
+            };
 
             thumbnailDiv.innerHTML = `
                 <img src="${camera.image}" alt="${camera.name}">
@@ -241,23 +254,42 @@
         }
     }
 
-    let offset = 0;
-    const limit = 20;
-    let isLoading = false; // prevent duplicate fetches
-    let selectedStartTime = null; // Store selected start time
-    let selectedEndTime = null;   // Store selected end time
-
-    // Modify initializeTimelineAndStates or create a new function:
+    // The function that appends events to #timelineTab
     function appendToTimeline(events) {
-        const timelineGrid = document.getElementById('timelineTab');
-        if (!timelineGrid) return;
+        logger.debug(`appendToTimeline called with events array length: ${events?.length || 0}`);
+        
+        const timelineGrid = document.getElementById('timelineContainer');
+        if (!timelineGrid) {
+            logger.error(`Timeline grid element (#timelineTab) not found in DOM`);
+            return;
+        }
 
-        events.forEach(event => {
+        if (!Array.isArray(events)) {
+            logger.error(`Events is not an array. Received type: ${typeof events}`);
+            return;
+        }
+
+        if (events.length > 0) {
+            logger.debug(`First event details - timestamp: ${events[0].timestamp}, data_id: ${events[0].data_id}, state: ${events[0].state}`);
+            logger.debug(`Last event details - timestamp: ${events[events.length-1].timestamp}, data_id: ${events[events.length-1].data_id}, state: ${events[events.length-1].state}`);
+        } else {
+            logger.debug(`Events array is empty`);
+        }
+
+        events.forEach((event, index) => {
+            if (!event || !event.timestamp || !event.data_id) {
+                logger.error(`Invalid event at index ${index} - event: ${JSON.stringify(event)}`);
+                return;
+            }
+
+            logger.debug(`Processing event ${index} - timestamp: ${event.timestamp}, data_id: ${event.data_id}, state: ${event.state}`);
+
             const timelineRow = document.createElement('div');
             timelineRow.className = 'timeline-row';
             const time = formatTimestamp(event.timestamp);
             const date = formatDate(event.timestamp);
             const imageUrl = `/get_frame_image/${event.data_id}`;
+
             timelineRow.innerHTML = `
                 <div class="hidden-date" style="display: none;">${date}</div>
                 <div class="time-marker">${time}</div>
@@ -277,64 +309,30 @@
                     <img src="${imageUrl}" alt="Event at ${time}" style="max-width: 60px; max-height: 60px;">
                 </div>
             `;
+            
             timelineRow.onclick = () => {
                 const mainCameraImage = document.getElementById('mainCameraImage');
-                mainCameraImage.src = imageUrl;
-            };
-            timelineGrid.appendChild(timelineRow);
-        });
-
-        // Update the date button after appending events
-        updateDateButton();
-    }
-
-    // Trigger another fetch once the user scrolls near bottom:
-    function setupInfiniteScroll() {
-        const container = document.getElementById('timelineContainer');
-        container.addEventListener('scroll', () => {
-            if (isLoading) return;
-
-            // If scrolled to bottom (or near bottom):
-            if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
-                loadMoreTimeline();
-            }
-        });
-    }
-
-    function loadMoreTimeline() {
-        if (isLoading) return;
-        isLoading = true;
-
-        let url = '';
-        const params = new URLSearchParams();
-
-        // Use the date-based endpoint if a date range is selected
-        if (selectedStartTime && selectedEndTime) {
-            url = '/get_timeline_events_by_date_paginated/';
-            params.append('start_time', selectedStartTime);
-            params.append('end_time', selectedEndTime);
-        } else {
-            // Use the default paginated endpoint
-            url = '/get_timeline_events_paginated/';
-        }
-
-        // Append pagination parameters
-        params.append('offset', offset);
-        params.append('limit', limit);
-
-        fetch(`${url}?${params.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.events && data.events.length > 0) {
-                    appendToTimeline(data.events);
-                    offset += data.events.length;
+                if (mainCameraImage) {
+                    mainCameraImage.src = imageUrl;
+                    logger.debug(`Updated main camera image to URL: ${imageUrl}`);
+                } else {
+                    logger.error(`Main camera image element not found when trying to set image: ${imageUrl}`);
                 }
-                isLoading = false;
-            })
-            .catch(err => {
-                console.error("Error fetching more timeline events:", err);
-                isLoading = false;
-            });
+            };
+            
+            timelineGrid.appendChild(timelineRow);
+            logger.debug(`Successfully appended timeline row ${index} with timestamp: ${event.timestamp}`);
+        });
+
+        logger.debug(`Completed appending all ${events.length} events to timeline`);
+        updateDateButton();
+        logger.debug(`Date button updated after appending ${events.length} events`);
+    }
+
+    // Function to determine which append function to use
+    function determineAppendFunction() {
+        console.log('cameraSelected:', CameraState.isCameraSelected());
+        return CameraState.isCameraSelected() ? appendToTimelineFromUIUpdates : appendToTimeline;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -369,36 +367,13 @@
             initializeTimelineAndStates(updatedData);
         });
 
-        setupInfiniteScroll();
-    });
-
-    // Function to update the date button based on the first event in the timeline
-    function updateDateButton() {
-        const timelineGrid = document.getElementById('timelineTab');
-        const dateButton = document.querySelector('.date-button');
-
-        if (!timelineGrid || !dateButton) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            for (const entry of entries) {
-                if (entry.isIntersecting) {
-                    const hiddenDate = entry.target.querySelector('.hidden-date');
-                    if (hiddenDate) {
-                        const eventDate = new Date(hiddenDate.textContent);
-                        dateButton.innerHTML = `<i class="fas fa-calendar"></i> ${formatDate(eventDate)} <i class="fas fa-chevron-down"></i>`;
-                        break; // Stop observing once we find the first visible event
-                    }
-                }
-            }
-        }, {
-            root: timelineGrid,
-            threshold: 0.1 // Adjust this threshold as needed
+        setupTimelineInfiniteScroll('timelineContainer', () => {
+            loadMoreTimelineEvents(() => {
+                const appendFunction = determineAppendFunction();
+                return appendFunction;
+            }, CameraState.getCameraId());
         });
-
-        // Observe each timeline row
-        const timelineRows = timelineGrid.querySelectorAll('.timeline-row');
-        timelineRows.forEach(row => observer.observe(row));
-    }
+    });
 
     // Define the showCalendar function
     window.showCalendar = function() {
@@ -433,30 +408,40 @@
 
                 // Build a time range of [picked date at 00:00, +1 hour]
                 let pickedDate = new Date(dateStr + "T00:00:00");
-                let endDate = new Date(pickedDate.getTime() + 60 * 60 * 24 *1000);
+                let endDate = new Date(pickedDate.getTime() + 60 * 60 * 24 * 1000);
 
                 let startTimeISO = pickedDate.toISOString();
                 let endTimeISO = endDate.toISOString();
 
-                // Store the selected date range globally
-                selectedStartTime = startTimeISO;
-                selectedEndTime = endTimeISO;
+                // Use the new function in uiUpdates to set range & reset
+                setTimelineDateRangeAndReset(startTimeISO, endTimeISO);
 
-                // Reset pagination
-                offset = 0;
-                isLoading = false;
-
-                // Clear current timeline
-                const timelineGrid = document.getElementById('timelineTab');
+                // Clear the timeline
+                const timelineGrid = document.getElementById('timelineContainer');
                 timelineGrid.innerHTML = '';
 
-                // Fetch events for the selected date range
-                loadMoreTimeline();
+                clearTimeline();
+
+                console.log('CameraState.isCameraSelected():', CameraState.isCameraSelected());
+                // Now load more timeline events from that range
+                loadMoreTimelineEvents(() => {
+                    return CameraState.isCameraSelected() ? appendToTimelineFromUIUpdates : appendToTimeline;
+                }, CameraState.getCameraId());
             }
         });
 
         // Programmatically open the calendar
         dateInput.click();
+    }
+
+    // When clearing or updating "timelineTab":
+    function clearTimeline() {
+        const timelineGrid = document.getElementById('timelineContainer');
+        if (!timelineGrid) {
+            console.warn("'timelineTab' element is not found in the DOM.");
+            return;
+        }
+        timelineGrid.innerHTML = '';
     }
 
 </script>

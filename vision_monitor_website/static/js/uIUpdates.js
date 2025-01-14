@@ -13,6 +13,26 @@ let limit = 20;
 let isLoading = false;
 let currentCameraId = null;  // Track currently selected camera
 
+// Timeline pagination and date-range tracking
+let timelineOffset = 0;
+const timelineLimit = 20;
+let timelineIsLoading = false;
+let selectedStartTime = null; // Store selected start time
+let selectedEndTime = null;   // Store selected end time
+
+// Define the CameraState module
+export const CameraState = (() => {
+    let cameraSelected = false;
+    let cameraId = null; // Add a variable to store the cameraId
+
+    return {
+        isCameraSelected: () => cameraSelected,
+        setCameraSelected: (value) => { cameraSelected = value; },
+        getCameraId: () => cameraId, // Method to get the cameraId
+        setCameraId: (id) => { cameraId = id; } // Method to set the cameraId
+    };
+})();
+
 export function updateCameraStates(cameraStates) {
     const cameraStatesDiv = document.getElementById('camera-states');
     if (!cameraStatesDiv) {
@@ -235,7 +255,7 @@ export function initializeTimelinePage(initialData) {
 }
 
 // Utility function to add new events to the existing timeline
-function appendToTimeline(events) {
+export function appendToTimeline(events) {
     const timelineContainer = document.getElementById('timelineContainer');
     if (!timelineContainer) {
         console.warn('Timeline container not found');
@@ -277,6 +297,7 @@ function appendToTimeline(events) {
         };
         timelineContainer.appendChild(timelineRow);
     });
+    updateDateButton();
 }
 
 // Set up scroll listener to fetch more data
@@ -458,6 +479,10 @@ export function selectCamera(cameraIndex, cameraId) {
                 errorStack: error.stack
             });
         });
+
+    // Update the cameraId in the CameraState module
+    CameraState.setCameraId(cameraId);
+    CameraState.setCameraSelected(true);
 }
 
 export function getStateIcon(state) {
@@ -478,4 +503,148 @@ export function getStateIcon(state) {
         return '<i class="fas fa-door-open" title="Door Open"></i>';
     }
     return '<i class="fas fa-camera" title="Default State"></i>';
+}
+
+/**
+ * Initialize infinite scroll for the timeline container.
+ * @param {string} containerId - The ID of the scroll container element (e.g. 'timelineContainer')
+ * @param {Function} loadMoreFn - The function to call when fetching more events
+ */
+export function setupTimelineInfiniteScroll(containerId, loadMoreFn) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.warn('Timeline container not found for infinite scroll');
+        return;
+    }
+    container.addEventListener('scroll', () => {
+        if (timelineIsLoading) return;
+        // If scrolled to bottom/near bottom
+        if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
+            loadMoreFn();
+        }
+    });
+}
+
+/**
+ * Load more timeline events. 
+ * If cameraId is provided (and cameraSelected is true), we fetch timeline events specifically for that camera 
+ * using either the date-paginated camera endpoint or the default camera endpoint. 
+ * Otherwise, we use the global timeline endpoints.
+ *
+ * @param {Function} getAppendFn - The function used to append new events
+ * @param {string|null} cameraId - The optional ID of the camera for which to fetch events
+ */
+export function loadMoreTimelineEvents(getAppendFn, cameraId = null) {
+    if (timelineIsLoading) {
+        logger.debug('Timeline is already loading, skipping request');
+        return;
+    }
+    timelineIsLoading = true;
+
+    let url = '';
+    const params = new URLSearchParams();
+
+    // Decide which endpoint to call based on date range and cameraId
+    if (cameraId) {
+        // If the user selected a camera, direct requests to the camera-specific endpoints
+        if (selectedStartTime && selectedEndTime) {
+            url = '/get_timeline_events_by_date';
+            params.append('start_time', selectedStartTime);
+            params.append('end_time', selectedEndTime);
+            logger.debug(`Loading camera ${cameraId} timeline (by date) startTime=${selectedStartTime}, endTime=${selectedEndTime}`);
+        } else {
+            // If no date range is selected, fall back to the normal paginated endpoint
+            // but with a camera_id parameter appended for filtering if your endpoint 
+            // supports it (or you might have a separate endpoint).
+            url = '/get_timeline_events_paginated';
+            logger.debug(`Loading camera ${cameraId} timeline without date range.`);
+        }
+        params.append('camera_id', cameraId);
+
+    } else {
+        // If no camera is selected
+        if (selectedStartTime && selectedEndTime) {
+            url = '/get_timeline_events_by_date_paginated';
+            params.append('start_time', selectedStartTime);
+            params.append('end_time', selectedEndTime);
+            logger.debug(`Loading timeline by date (no camera). Range: startTime=${selectedStartTime}, endTime=${selectedEndTime}`);
+        } else {
+            // No date range, no camera => default timeline
+            url = '/get_timeline_events_paginated';
+            logger.debug(`Loading timeline without camera or date range.`);
+        }
+    }
+
+    params.append('offset', timelineOffset);
+    params.append('limit', timelineLimit);
+
+    const fullUrl = `${url}?${params.toString()}`;
+    logger.debug(`Request URL: ${fullUrl} with params: ${params.toString()}`);
+
+    fetch(fullUrl)
+        .then(response => {
+            logger.debug('Timeline API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            logger.debug('Received timeline data:', {
+                eventsCount: data.events?.length || 0
+            });
+
+            if (data.events && data.events.length > 0) {
+                const appendFn = getAppendFn();
+                logger.debug('Appending events to timeline, appendFn exists:', !!appendFn);
+                appendFn(data.events);
+                timelineOffset += data.events.length;
+                logger.debug('Updated timeline offset to:', timelineOffset);
+            } else {
+                logger.debug('No events received from API');
+            }
+            timelineIsLoading = false;
+        })
+        .catch(err => {
+            logger.error('Error fetching timeline events:', {
+                error: err.message,
+                url: fullUrl,
+                params: Object.fromEntries(params.entries())
+            });
+            timelineIsLoading = false;
+        });
+}
+
+/**
+ * Let external code set the date range (start/end) and reset pagination.
+ */
+export function setTimelineDateRangeAndReset(startTimeISO, endTimeISO) {
+    selectedStartTime = startTimeISO;
+    selectedEndTime = endTimeISO;
+    timelineOffset = 0;
+    timelineIsLoading = false;
+}
+ // Function to update the date button based on the first event in the timeline
+export function updateDateButton() {
+    const timelineGrid = document.getElementById('timelineContainer');
+    const dateButton = document.querySelector('.date-button');
+
+    if (!timelineGrid || !dateButton) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) {
+                const hiddenDate = entry.target.querySelector('.hidden-date');
+                if (hiddenDate) {
+                    const eventDate = new Date(hiddenDate.textContent);
+                    dateButton.innerHTML = `<i class="fas fa-calendar"></i> ${formatDate(eventDate)} <i class="fas fa-chevron-down"></i>`;
+                    break; // Stop observing once we find the first visible event
+                }
+            }
+        }
+    }, {
+        root: timelineGrid,
+        threshold: 0.1 // Adjust this threshold as needed
+    });
+
+    // Observe each timeline row
+    const timelineRows = timelineGrid.querySelectorAll('.timeline-row');
+    timelineRows.forEach(row => observer.observe(row));
 }
