@@ -94,7 +94,7 @@ body {
 }
 
 .modal-content {
-    background-color: transparent;
+    background-color: white;
     border: none;
 }
 
@@ -206,10 +206,7 @@ body {
     margin: 1.75rem auto;
 }
 
-.modal-content {
-    background-color: transparent;
-    border: none;
-}
+
 
 .modal-content-text {
     background-color: white;
