@@ -295,6 +295,9 @@ export function appendToTimeline(events) {
                 mainCameraImage.src = imageUrl;
             }
         };
+        timelineRow.ondblclick = () => {
+            eventDescriptionModal(event);
+        };
         timelineContainer.appendChild(timelineRow);
     });
     updateDateButton();
@@ -647,4 +650,38 @@ export function updateDateButton() {
     // Observe each timeline row
     const timelineRows = timelineGrid.querySelectorAll('.timeline-row');
     timelineRows.forEach(row => observer.observe(row));
+}
+
+export function eventDescriptionModal(event) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Event Description</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>${event.description}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Use Bootstrap's modal API to show the modal with default "backdrop" and "keyboard" behaviors
+    const bootstrapModal = new bootstrap.Modal(modal, {
+        backdrop: true,  // Clicking outside the modal closes it
+        keyboard: true   // Pressing Escape closes the modal
+    });
+    bootstrapModal.show();
+
+    // Remove the modal from the DOM after it is hidden
+    modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+    });
 }
