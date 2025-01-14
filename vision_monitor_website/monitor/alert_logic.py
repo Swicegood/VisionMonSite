@@ -3,7 +3,7 @@ import time
 from collections import deque
 
 class AlertState:
-    def __init__(self, name, flap_threshold=5, flap_interval=300):
+    def __init__(self, name, flap_threshold=3, flap_interval=600):
         self.name = name
         self.is_alerting = False
         self.last_change = time.time()
