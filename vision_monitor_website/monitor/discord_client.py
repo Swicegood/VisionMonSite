@@ -2,10 +2,9 @@ import requests
 import logging
 import json
 from requests.exceptions import RequestException
-
+from .config import DISCORD_WEBHOOK_URL
 logger = logging.getLogger(__name__)
 
-DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/828356057680183377/VJLxRe7a0zzCmy6Q7LNVEy2qMD99yJLRARJ7RkYys5UQcY0yaO3HJFXbeM0Pox0FPMiA'
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MiB in bytes
 
 def send_discord_message(image_paths, message, ttime, title):
