@@ -35,7 +35,7 @@ def parse_facility_state(raw_message):
         
         alerts = []
         for camera_id, state in most_frequent_states.items():
-            is_alerting = any(phrase in state.lower() for phrase in ["big religious festival", "religious or spiritual gathering", "door open"])
+            is_alerting = any(phrase in state.lower() for phrase in ["big religious festival", "door open"])
             alert_result = alert_manager.update_state(camera_id, is_alerting)
             if alert_result:
                 alerts.append((camera_id, alert_result, state))
