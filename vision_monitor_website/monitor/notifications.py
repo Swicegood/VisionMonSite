@@ -150,7 +150,7 @@ def send_daily_summary(title, message):
     message = message[:1000]  # Limit message length to 2000 characters
     try:
         try:
-            latest_image, timesstamp = get_latest_image_non_web(17)  # Assuming camera_index 1 for the test
+            latest_image, timesstamp = get_latest_image_non_web(7)  # Axis camera (updated from 17 to 7)
             logger.info("Latest image retrieved successfully for dIaily summary")
         except Exception as e:
             logger.error(f"Error retrieving latest image for daily summary: {str(e)}")

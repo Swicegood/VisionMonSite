@@ -65,52 +65,40 @@ def update_camera_state(camera_id, state, timestamp):
     logger.info(f"Updated state for camera {camera_id}: {state} at {timestamp}")
 
 # Define alert state penalties and problematic states for specific cameras
+# Updated for 8 cameras (reduced from 18 for faster processing)
 camera_alert_config = {
-    "Audio_Visual 1": {
+    "Down_Pujari 1": {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
-    "Back_Driveway 2": {
-        "penalty": 0.7,
-        "alert_states": {"bustling", "big religious festival"}
-    },
-    "Bhoga_Shed 3": {
-        "penalty": 0.7,
-        "alert_states": {"door open"}
-    },
-    "Field 6": {
-        "penalty": 0.7,
-        "alert_states": {"bustling"}
-    },
-    "Hall 8": {
+    "Hall 2": {
         "penalty": 0.4,
         "alert_states": {"bustling", "religious or spiritual gathering", "big religious festival"}
     },
-    "Kitchen 9": {
+    "Kitchen 3": {
         "penalty": 0.7,
         "alert_states": {"bustling"}
     },
-    "Prabhupada 11": {
+    "Prabhupada 4": {
         "penalty": 0.5,
         "alert_states": {"big religious festival"}
-    },        
-    "Stage 12": {
-        "penalty": 0.4,
-        "alert_states": {"bustling", "religious or spiritual gathering", "big religious festival"}
     },
-    "Temple 13": {
+    "Temple 5": {
         "penalty": 0.4,
         "alert_states": {"big religious festival"}
     },
-    "Walk-in 15": {
-        "penalty": 0.5,
-        "alert_states": {"door open"}
-},
-    "Axis 17": {
+    "Up_Pujari 6": {
+        "penalty": 0.7,
+        "alert_states": {"bustling"}
+    },
+    "Axis 7": {
         "penalty": 0.1,
         "alert_states": {"big religious festival"}
+    },
+    "Front_Driveway 8": {
+        "penalty": 0.7,
+        "alert_states": {"bustling", "big religious festival"}
     }
-    # Add other cameras with their specific penalties and problematic states
 }
 
 facility_config = {

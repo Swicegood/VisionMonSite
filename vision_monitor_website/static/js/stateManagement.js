@@ -2,7 +2,7 @@ import { updateFacilityState, updateCameraStates, updateSingleCamera,
     updateCameraFeeds, updateLLMOutput
  } from './uIUpdates.js';
 
-const maxCameras = 16;
+const maxCameras = 8;  // Reduced from 18 to 8 cameras for faster processing
 const maxLLMMessages = 50;
 const cameraMap = new Map();
 const llmMessages = [];

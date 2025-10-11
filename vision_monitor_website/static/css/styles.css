@@ -21,23 +21,23 @@ body {
     margin-bottom: 20px;
 }
 
-/* Landscape mode: 2 rows of 9 columns */
+/* Landscape mode: 2 rows of 4 columns for 8 cameras */
 @media (orientation: landscape) {
     #camera-states {
-        grid-template-columns: repeat(9, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         grid-template-rows: repeat(2, auto);
     }
     .camera-grid {
-        grid-template-columns: repeat(5, 1fr);
-        grid-template-rows: repeat(4, auto);
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(2, auto);
     }
 }
 
-/* Portrait mode: 5 rows of 4 columns */
+/* Portrait mode: 4 rows of 2 columns for 8 cameras */
 @media (orientation: portrait) {
     #camera-states, .camera-grid {
-        grid-template-columns: repeat(4, 1fr);
-        grid-template-rows: repeat(5, auto);
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(4, auto);
     }
 }
 
@@ -150,23 +150,23 @@ body {
 
 /* === Responsive Layouts === */
 
-/* Landscape mode: 2 rows of 9 columns */
+/* Landscape mode: 2 rows of 4 columns for 8 cameras */
 @media (orientation: landscape) {
     #camera-states {
-        grid-template-columns: repeat(9, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         grid-template-rows: repeat(2, auto);
     }
     .camera-grid {
-        grid-template-columns: repeat(5, 1fr);
-        grid-template-rows: repeat(4, auto);
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(2, auto);
     }
 }
 
-/* Portrait mode: 5 rows of 4 columns */
+/* Portrait mode: 4 rows of 2 columns for 8 cameras */
 @media (orientation: portrait) {
     #camera-states, .camera-grid {
-        grid-template-columns: repeat(4, 1fr);
-        grid-template-rows: repeat(5, auto);
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(4, auto);
     }
 }
 
