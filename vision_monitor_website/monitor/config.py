@@ -11,6 +11,12 @@ REDIS_HOST = os.getenv('REDIS_HOST', '192.168.0.71')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 ALERT_QUEUE = os.getenv('ALERT_QUEUE', 'alert_queue')
 
+DAILY_SUMMARY = os.getenv('DAILY_SUMMARY', 'true')
+if DAILY_SUMMARY.lower() == 'true':
+    DAILY_SUMMARY = True
+else:
+    DAILY_SUMMARY = False
+
 DISCORD_WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL', '')
 
 # Camera information - Reduced to 8 cameras for faster processing

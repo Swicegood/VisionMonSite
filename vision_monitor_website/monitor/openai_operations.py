@@ -14,6 +14,7 @@ import aiohttp
 
 from .db_operations import fetch_daily_descriptions
 from .notifications import send_daily_summary
+from .config import DAILY_SUMMARY
 
 SMTP_SERVER = os.getenv('SMTP_SERVER', '192.168.0.71')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 25))
@@ -100,6 +101,10 @@ async def send_email_async(subject, body):
 @async_retry(max_retries=3, base_delay=2, max_delay=120)
 async def generate_daily_summary():
     try:
+        if not DAILY_SUMMARY:
+            logger.info("Daily summary generation is disabled by configuration.")
+            return
+
         logger.debug("Starting daily summary generation")
         daily_descriptions = await fetch_daily_descriptions()
         
@@ -148,9 +153,13 @@ async def test_openai_connection():
                 return await response.text()
             
 async def start_scheduled_tasks():
+    if not DAILY_SUMMARY:
+        logger.info("Daily summary scheduling is disabled by configuration.")
+        return
+
     # Schedule the daily summary task
     cron = aiocron.crontab('0 0 * * *', func=generate_daily_summary)
-    
+
     while True:
         await asyncio.sleep(3600)  # Sleep for an hour
 
@@ -167,6 +176,10 @@ def run_scheduler_in_thread():
 
 # This function should be called when your application starts
 def run_scheduler():
+    if not DAILY_SUMMARY:
+        logger.info("Daily summary feature is disabled; scheduler will not start.")
+        return
+
     if DEBUG:
         try:
             # First, test the OpenAI connection
